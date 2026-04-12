@@ -1,0 +1,44 @@
+#!/bin/bash
+#PBS -N llm_netcheck
+#PBS -P personal-dsee009
+#PBS -q normal
+#PBS -l select=1:ncpus=2:mem=4gb
+#PBS -l walltime=00:10:00
+#PBS -j oe
+
+set -euo pipefail
+cd "${PBS_O_WORKDIR:-$PWD}"
+OUT_DIR="llm_netcheck_${PBS_JOBID:-local}_$(date +%Y%m%d_%H%M%S)"; mkdir -p "$OUT_DIR"
+LOG="$OUT_DIR/netcheck.txt"
+
+{
+  echo "OUT_DIR=$OUT_DIR"
+  echo "DATE=$(date -Is)"
+  echo "HOST=$(hostname 2>/dev/null || true)"
+  env | grep -i -E '^(http|https|all)_proxy=' || echo "NO_PROXY_ENV"
+  echo
+} >"$LOG"
+
+fail=0
+run() { name="$1"; shift; { echo "=== $name ==="; echo "+ $*"; "$@"; echo "exit=$?"; echo; } >>"$LOG" 2>&1 || fail=1; }
+
+check_url() {
+  name="$1"; url="$2"; host="${url#https://}"; host="${host%%/*}"
+  command -v curl >/dev/null 2>&1 && run "curl_$name" curl -Iv --connect-timeout 10 --max-time 20 "$url" || true
+  command -v openssl >/dev/null 2>&1 && run "ssl_$name" openssl s_client -connect "${host}:443" -servername "$host" </dev/null || true
+  command -v python >/dev/null 2>&1 && run "py_$name" python -c "exec('import sys,urllib.request,urllib.error\\nu=\"${url}\"\\ntry:\\n  urllib.request.urlopen(u,timeout=20); print(\"OK\")\\nexcept urllib.error.HTTPError as e:\\n  print(\"HTTP\",e.code)\\nexcept Exception as e:\\n  print(\"ERR\",type(e).__name__,e); sys.exit(1)')" || true
+}
+
+# These do NOT require API keys; any 401/403 still proves connectivity.
+check_url deepseek "https://api.deepseek.com/v1/models"
+check_url openai "https://api.openai.com/v1/models"
+check_url groq "https://api.groq.com/openai/v1/models"
+check_url together "https://api.together.xyz/v1/models"
+check_url fireworks "https://api.fireworks.ai/inference/v1/models"
+check_url openrouter "https://openrouter.ai/api/v1/models"
+check_url anthropic "https://api.anthropic.com/"
+
+echo "FAIL=$fail" >>"$LOG"
+echo "WROTE=$LOG"
+exit "$fail"
+

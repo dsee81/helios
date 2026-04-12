@@ -1,0 +1,47 @@
+#!/bin/bash
+#PBS -N deepseek_netcheck
+#PBS -P personal-dsee009
+#PBS -q normal
+#PBS -l select=1:ncpus=2:mem=4gb
+#PBS -l walltime=00:10:00
+#PBS -j oe
+
+set -euo pipefail
+ROOT_DIR="${PBS_O_WORKDIR:-$PWD}"
+cd "$ROOT_DIR"
+OUT_DIR="deepseek_netcheck_${PBS_JOBID:-local}_$(date +%Y%m%d_%H%M%S)"
+mkdir -p "$OUT_DIR"
+
+LOG="$OUT_DIR/netcheck.txt"
+{
+  echo "OUT_DIR=$OUT_DIR"
+  echo "DATE=$(date -Is)"
+  echo "HOST=$(hostname 2>/dev/null || true)"
+  env | grep -i -E '^(http|https|all)_proxy=' || echo "NO_PROXY_ENV"
+  echo
+} >"$LOG"
+
+fail=0
+run() {
+  name="$1"; shift
+  {
+    echo "=== $name ==="
+    echo "+ $*"
+    "$@"
+    code="$?"
+    echo "exit=$code"
+    echo
+  } >>"$LOG" 2>&1
+  [ "$code" -eq 0 ] || fail=1
+}
+
+command -v getent >/dev/null 2>&1 && run dns getent hosts api.deepseek.com || true
+command -v nslookup >/dev/null 2>&1 && run dns_nslookup nslookup api.deepseek.com || true
+command -v curl >/dev/null 2>&1 && run curl curl -Iv --connect-timeout 10 --max-time 20 https://api.deepseek.com/v1/models || true
+command -v curl >/dev/null 2>&1 && run curl4 curl -4 -Iv --connect-timeout 10 --max-time 20 https://api.deepseek.com/v1/models || true
+command -v openssl >/dev/null 2>&1 && run openssl openssl s_client -connect api.deepseek.com:443 -servername api.deepseek.com </dev/null || true
+command -v python >/dev/null 2>&1 && run py python -c "exec('import sys,urllib.request,urllib.error\\nu=\"https://api.deepseek.com/v1/models\"\\ntry:\\n  urllib.request.urlopen(u,timeout=20)\\n  print(\"HTTP 200\")\\nexcept urllib.error.HTTPError as e:\\n  print(\"HTTP\",e.code)\\nexcept Exception as e:\\n  print(\"ERR\",type(e).__name__,e); sys.exit(1)')" || true
+
+echo "FAIL=$fail" >>"$LOG"
+echo "WROTE=$LOG"
+exit "$fail"

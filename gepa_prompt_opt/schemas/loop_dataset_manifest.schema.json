@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/schemas/loop_dataset_manifest.schema.json",
+  "title": "Loop Task Dataset Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "task", "videos"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Manifest format version, e.g. '1.0'."
+    },
+    "task": {
+      "type": "string",
+      "const": "loop",
+      "description": "Primary task this dataset is for."
+    },
+    "path_base": {
+      "type": "string",
+      "default": ".",
+      "description": "Base directory for resolving relative paths. If omitted, resolve relative to the manifest file."
+    },
+    "default_task_type": {
+      "type": "string",
+      "default": "loop",
+      "description": "Default evaluator task_type if a video entry does not specify one."
+    },
+    "videos": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/video_entry" }
+    }
+  },
+  "$defs": {
+    "video_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "input_video_path", "initial_prompt", "duration_seconds"],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Unique integer ID (stable across runs)."
+        },
+        "input_video_path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Path to the input video for v2v inference (relative or absolute)."
+        },
+        "initial_prompt": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Original/base prompt for this video (used for reference and/or as a template variable)."
+        },
+        "duration_seconds": {
+          "type": ["number", "integer"],
+          "minimum": 0,
+          "description": "Video duration in seconds."
+        },
+        "task_type": {
+          "type": "string",
+          "enum": ["loop", "reconstruct_original", "immediate_turn", "doorway_entry", "minor_scene_change"]
+        },
+        "split": {
+          "type": "string",
+          "enum": ["train", "dev", "test"],
+          "default": "train"
+        },
+        "group_id": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "variables": {
+          "type": "object",
+          "additionalProperties": { "type": ["string", "number", "integer", "boolean", "null"] }
+        }
+      }
+    }
+  }
+}
+

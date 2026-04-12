@@ -1,0 +1,19 @@
+{
+  "version": "1.0",
+  "task": "loop",
+  "path_base": ".",
+  "default_task_type": "loop",
+  "videos": [
+    {
+      "id": 1,
+      "input_video_path": "example/car.mp4",
+      "initial_prompt": "Walk forward, turn around smoothly, and return to the starting viewpoint.",
+      "duration_seconds": 10.0,
+      "split": "train",
+      "variables": {
+        "scene": "a curving mountain road"
+      }
+    }
+  ]
+}
+

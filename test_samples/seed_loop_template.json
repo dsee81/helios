@@ -1,0 +1,25 @@
+{
+  "template_version": "1.0",
+  "task": "loop",
+  "components": {
+    "role_instruction": "You are a video generation system producing a coherent first-person navigation clip.",
+    "action_description": "Follow the instruction: {initial_prompt}",
+    "loop_completion_requirement": "Complete a loop: by the end of the video, return to the starting viewpoint and match the initial scene composition as closely as possible.",
+    "temporal_consistency_constraints": "Maintain stable motion and consistent scene layout across time; avoid progressive drift.",
+    "scene_preservation_constraints": "Preserve the same environment, objects, and lighting; do not introduce new rooms or major changes.",
+    "negative_constraints": "Do not cut, teleport, or abruptly jump; do not change to a different location; avoid jitter and discontinuities."
+  },
+  "render": {
+    "order": [
+      "role_instruction",
+      "action_description",
+      "loop_completion_requirement",
+      "temporal_consistency_constraints",
+      "scene_preservation_constraints",
+      "negative_constraints"
+    ],
+    "separator": "\n\n",
+    "labels": false
+  }
+}
+

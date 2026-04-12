@@ -532,12 +532,36 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
         # ------------ CFG Zero ------------
         use_zero_init: bool | None = True,
         zero_steps: int | None = 1,
+        # ------------ DATE-lite ------------
+        use_date: bool = False,
+        date_strength: float = 0.02,
+        # ------------ Gradient DATE (plumbing only here; implemented separately) ------------
+        use_date_grad: bool = False,
+        date_lr: float = 0.02,
+        date_update_freq: int = 2,
         # ------------ Callback ------------
         callback_on_step_end: Callable[[int, int], None] | PipelineCallback | MultiPipelineCallbacks | None = None,
         callback_on_step_end_tensor_inputs: list[str] = ["latents"],
         progress_bar=None,
     ):
         batch_size = latents.shape[0]
+        if use_date and use_date_grad:
+            raise ValueError("Only one DATE mode can be enabled at a time: choose use_date or use_date_grad.")
+
+        update_text_embeddings = None
+        update_text_embeddings_grad = None
+        if use_date:
+            from ..utils.date_adapter import update_text_embeddings as _update_text_embeddings
+
+            update_text_embeddings = _update_text_embeddings
+        if use_date_grad:
+            from ..utils.date_gradient_adapter import update_text_embeddings_grad as _update_text_embeddings_grad
+
+            update_text_embeddings_grad = _update_text_embeddings_grad
+            self.transformer.requires_grad_(False)
+            date_update_freq = max(int(date_update_freq), 1)
+
+        prompt_embeds_current = prompt_embeds.clone() if (use_date or use_date_grad) else prompt_embeds
 
         for i, t in enumerate(timesteps):
             if self.interrupt:
@@ -547,21 +571,64 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
             timestep = t.expand(latents.shape[0])
 
             latent_model_input = latents.to(transformer_dtype)
-            with self.transformer.cache_context("cond"):
-                noise_pred = self.transformer(
-                    hidden_states=latent_model_input,
-                    timestep=timestep,
-                    encoder_hidden_states=prompt_embeds,
-                    indices_hidden_states=indices_hidden_states,
-                    indices_latents_history_short=indices_latents_history_short,
-                    indices_latents_history_mid=indices_latents_history_mid,
-                    indices_latents_history_long=indices_latents_history_long,
-                    latents_history_short=latents_history_short.to(transformer_dtype),
-                    latents_history_mid=latents_history_mid.to(transformer_dtype),
-                    latents_history_long=latents_history_long.to(transformer_dtype),
-                    attention_kwargs=attention_kwargs,
-                    return_dict=False,
-                )[0]
+
+            do_date_grad_update = use_date_grad and (i % date_update_freq == 0)
+            if do_date_grad_update:
+                with torch.enable_grad():
+                    prompt_embeds_for_grad = prompt_embeds_current.detach().clone().requires_grad_(True)
+                    # DATE-grad requires autograd through the transformer w.r.t. prompt embeddings.
+                    # This is memory-heavy; checkpoint the forward to trade compute for lower peak VRAM.
+                    def _date_grad_forward(_latent_model_input, _prompt_embeds_for_grad):
+                        with self.transformer.cache_context("cond"):
+                            return self.transformer(
+                                hidden_states=_latent_model_input,
+                                timestep=timestep,
+                                encoder_hidden_states=_prompt_embeds_for_grad,
+                                indices_hidden_states=indices_hidden_states,
+                                indices_latents_history_short=indices_latents_history_short,
+                                indices_latents_history_mid=indices_latents_history_mid,
+                                indices_latents_history_long=indices_latents_history_long,
+                                latents_history_short=latents_history_short.to(transformer_dtype),
+                                latents_history_mid=latents_history_mid.to(transformer_dtype),
+                                latents_history_long=latents_history_long.to(transformer_dtype),
+                                attention_kwargs=attention_kwargs,
+                                return_dict=False,
+                            )[0]
+
+                    noise_pred = torch.utils.checkpoint.checkpoint(
+                        _date_grad_forward,
+                        latent_model_input,
+                        prompt_embeds_for_grad,
+                        use_reentrant=False,
+                    )
+
+                    prompt_embeds_current = update_text_embeddings_grad(
+                        prompt_embeds_for_grad,
+                        noise_pred,
+                        latents,
+                        t,
+                        scheduler=self.scheduler,
+                        transformer=self.transformer,
+                        lr=date_lr,
+                    ).to(dtype=transformer_dtype)
+
+                noise_pred = noise_pred.detach()
+            else:
+                with self.transformer.cache_context("cond"):
+                    noise_pred = self.transformer(
+                        hidden_states=latent_model_input,
+                        timestep=timestep,
+                        encoder_hidden_states=prompt_embeds_current,
+                        indices_hidden_states=indices_hidden_states,
+                        indices_latents_history_short=indices_latents_history_short,
+                        indices_latents_history_mid=indices_latents_history_mid,
+                        indices_latents_history_long=indices_latents_history_long,
+                        latents_history_short=latents_history_short.to(transformer_dtype),
+                        latents_history_mid=latents_history_mid.to(transformer_dtype),
+                        latents_history_long=latents_history_long.to(transformer_dtype),
+                        attention_kwargs=attention_kwargs,
+                        return_dict=False,
+                    )[0]
 
             if self.do_classifier_free_guidance:
                 with self.transformer.cache_context("uncond"):
@@ -596,6 +663,17 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
                 else:
                     noise_pred = noise_uncond + guidance_scale * (noise_pred - noise_uncond)
 
+            if use_date:
+                prompt_embeds_current = update_text_embeddings(
+                    prompt_embeds_current,
+                    noise_pred=noise_pred,
+                    latents=latents,
+                    scheduler=self.scheduler,
+                    strength=date_strength,
+                    step=i,
+                    update_freq=date_update_freq,
+                )
+
             latents = self.scheduler.step(
                 noise_pred,
                 t,
@@ -610,8 +688,10 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
                 callback_outputs = callback_on_step_end(self, i, t, callback_kwargs)
 
                 latents = callback_outputs.pop("latents", latents)
-                prompt_embeds = callback_outputs.pop("prompt_embeds", prompt_embeds)
+                prompt_embeds_current = callback_outputs.pop("prompt_embeds", prompt_embeds_current)
                 negative_prompt_embeds = callback_outputs.pop("negative_prompt_embeds", negative_prompt_embeds)
+                if use_date_grad:
+                    prompt_embeds_current = prompt_embeds_current.detach()
 
             if i == len(timesteps) - 1 or ((i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0):
                 progress_bar.update()
@@ -643,6 +723,13 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
         # ------------ CFG Zero ------------
         use_zero_init: bool | None = True,
         zero_steps: int | None = 1,
+        # ------------ DATE-lite ------------
+        use_date: bool = False,
+        date_strength: float = 0.02,
+        # ------------ Gradient DATE (plumbing only here; implemented separately) ------------
+        use_date_grad: bool = False,
+        date_lr: float = 0.02,
+        date_update_freq: int = 2,
         # -------------- DMD --------------
         is_amplify_first_chunk: bool = False,
         # ------------ Callback ------------
@@ -651,6 +738,24 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
         progress_bar=None,
     ):
         batch_size, num_channel, num_frames, height, width = latents.shape
+        if use_date and use_date_grad:
+            raise ValueError("Only one DATE mode can be enabled at a time: choose use_date or use_date_grad.")
+
+        update_text_embeddings = None
+        update_text_embeddings_grad = None
+        if use_date:
+            from ..utils.date_adapter import update_text_embeddings as _update_text_embeddings
+
+            update_text_embeddings = _update_text_embeddings
+        if use_date_grad:
+            from ..utils.date_gradient_adapter import update_text_embeddings_grad as _update_text_embeddings_grad
+
+            update_text_embeddings_grad = _update_text_embeddings_grad
+            self.transformer.requires_grad_(False)
+            date_update_freq = max(int(date_update_freq), 1)
+
+        prompt_embeds_current = prompt_embeds.clone() if (use_date or use_date_grad) else prompt_embeds
+
         latents = latents.permute(0, 2, 1, 3, 4).reshape(batch_size * num_frames, num_channel, height, width)
         for _ in range(pyramid_num_stages - 1):
             height //= 2
@@ -720,21 +825,63 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
             for idx, t in enumerate(timesteps):
                 timestep = t.expand(latents.shape[0]).to(torch.int64)
 
-                with self.transformer.cache_context("cond"):
-                    noise_pred = self.transformer(
-                        hidden_states=latents.to(transformer_dtype),
-                        timestep=timestep,
-                        encoder_hidden_states=prompt_embeds,
-                        attention_kwargs=attention_kwargs,
-                        return_dict=False,
-                        indices_hidden_states=indices_hidden_states,
-                        indices_latents_history_short=indices_latents_history_short,
-                        indices_latents_history_mid=indices_latents_history_mid,
-                        indices_latents_history_long=indices_latents_history_long,
-                        latents_history_short=latents_history_short.to(transformer_dtype),
-                        latents_history_mid=latents_history_mid.to(transformer_dtype),
-                        latents_history_long=latents_history_long.to(transformer_dtype),
-                    )[0]
+                do_date_grad_update = use_date_grad and (idx % date_update_freq == 0)
+                if do_date_grad_update:
+                    with torch.enable_grad():
+                        prompt_embeds_for_grad = prompt_embeds_current.detach().clone().requires_grad_(True)
+                        latent_model_input = latents.to(transformer_dtype)
+
+                        def _date_grad_forward(_latent_model_input, _prompt_embeds_for_grad):
+                            with self.transformer.cache_context("cond"):
+                                return self.transformer(
+                                    hidden_states=_latent_model_input,
+                                    timestep=timestep,
+                                    encoder_hidden_states=_prompt_embeds_for_grad,
+                                    attention_kwargs=attention_kwargs,
+                                    return_dict=False,
+                                    indices_hidden_states=indices_hidden_states,
+                                    indices_latents_history_short=indices_latents_history_short,
+                                    indices_latents_history_mid=indices_latents_history_mid,
+                                    indices_latents_history_long=indices_latents_history_long,
+                                    latents_history_short=latents_history_short.to(transformer_dtype),
+                                    latents_history_mid=latents_history_mid.to(transformer_dtype),
+                                    latents_history_long=latents_history_long.to(transformer_dtype),
+                                )[0]
+
+                        noise_pred = torch.utils.checkpoint.checkpoint(
+                            _date_grad_forward,
+                            latent_model_input,
+                            prompt_embeds_for_grad,
+                            use_reentrant=False,
+                        )
+
+                        prompt_embeds_current = update_text_embeddings_grad(
+                            prompt_embeds_for_grad,
+                            noise_pred,
+                            latents,
+                            t,
+                            scheduler=self.scheduler,
+                            transformer=self.transformer,
+                            lr=date_lr,
+                        ).to(dtype=transformer_dtype)
+
+                    noise_pred = noise_pred.detach()
+                else:
+                    with self.transformer.cache_context("cond"):
+                        noise_pred = self.transformer(
+                            hidden_states=latents.to(transformer_dtype),
+                            timestep=timestep,
+                            encoder_hidden_states=prompt_embeds_current,
+                            attention_kwargs=attention_kwargs,
+                            return_dict=False,
+                            indices_hidden_states=indices_hidden_states,
+                            indices_latents_history_short=indices_latents_history_short,
+                            indices_latents_history_mid=indices_latents_history_mid,
+                            indices_latents_history_long=indices_latents_history_long,
+                            latents_history_short=latents_history_short.to(transformer_dtype),
+                            latents_history_mid=latents_history_mid.to(transformer_dtype),
+                            latents_history_long=latents_history_long.to(transformer_dtype),
+                        )[0]
 
                 if self.do_classifier_free_guidance:
                     with self.transformer.cache_context("uncond"):
@@ -771,6 +918,17 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
                     else:
                         noise_pred = noise_uncond + guidance_scale * (noise_pred - noise_uncond)
 
+                if use_date:
+                    prompt_embeds_current = update_text_embeddings(
+                        prompt_embeds_current,
+                        noise_pred=noise_pred,
+                        latents=latents,
+                        scheduler=self.scheduler,
+                        strength=date_strength,
+                        step=i,
+                        update_freq=date_update_freq,
+                    )
+
                 latents = self.scheduler.step(
                     noise_pred,
                     t,
@@ -791,8 +949,10 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
                     callback_outputs = callback_on_step_end(self, i, t, callback_kwargs)
 
                     latents = callback_outputs.pop("latents", latents)
-                    prompt_embeds = callback_outputs.pop("prompt_embeds", prompt_embeds)
+                    prompt_embeds_current = callback_outputs.pop("prompt_embeds", prompt_embeds_current)
                     negative_prompt_embeds = callback_outputs.pop("negative_prompt_embeds", negative_prompt_embeds)
+                    if use_date_grad:
+                        prompt_embeds_current = prompt_embeds_current.detach()
 
                 progress_bar.update()
 
@@ -881,6 +1041,12 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
         zero_steps: int | None = 1,
         # ------------ DMD ------------
         is_amplify_first_chunk: bool = False,
+        # ------------ DATE (inference-only) ------------
+        use_date: bool = False,
+        date_strength: float = 0.02,
+        use_date_grad: bool = False,
+        date_lr: float = 0.02,
+        date_update_freq: int = 2,
     ):
         r"""
         The call function to the pipeline for generation.
@@ -975,6 +1141,17 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
         )
 
         num_frames = max(num_frames, 1)
+
+        if use_date and use_date_grad:
+            raise ValueError("Only one DATE mode can be enabled at a time: choose use_date or use_date_grad.")
+        if (use_date or use_date_grad) and not getattr(self, "_date_logged", False):
+            if use_date:
+                logger.info(
+                    f"DATE enabled (lite, inference-only): strength={date_strength}, update_freq={date_update_freq}"
+                )
+            else:
+                logger.info(f"Gradient DATE enabled (inference-only): lr={date_lr}, update_freq={date_update_freq}")
+            self._date_logged = True
 
         self._guidance_scale = guidance_scale
         self._attention_kwargs = attention_kwargs
@@ -1284,6 +1461,12 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
                         # ------------ CFG Zero ------------
                         use_zero_init=use_zero_init,
                         zero_steps=zero_steps,
+                        # ------------ DATE ------------
+                        use_date=use_date,
+                        date_strength=date_strength,
+                        use_date_grad=use_date_grad,
+                        date_lr=date_lr,
+                        date_update_freq=date_update_freq,
                         # -------------- DMD --------------
                         is_amplify_first_chunk=is_amplify_first_chunk and is_first_chunk,
                         # ------------ Callback ------------
@@ -1313,6 +1496,12 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
                         # ------------ CFG Zero ------------
                         use_zero_init=use_zero_init,
                         zero_steps=zero_steps,
+                        # ------------ DATE ------------
+                        use_date=use_date,
+                        date_strength=date_strength,
+                        use_date_grad=use_date_grad,
+                        date_lr=date_lr,
+                        date_update_freq=date_update_freq,
                         # ------------ Callback ------------
                         callback_on_step_end=callback_on_step_end,
                         callback_on_step_end_tensor_inputs=callback_on_step_end_tensor_inputs,

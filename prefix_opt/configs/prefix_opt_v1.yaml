@@ -1,0 +1,100 @@
+data:
+  action_dirs:
+    w: "data/scand_chunks/w"
+    a: "data/scand_chunks/a"
+    s: "data/scand_chunks/s"
+    d: "data/scand_chunks/d"
+  latent_root: "data/scand_latents"
+  csv_root: "data/scand_csv"
+  prompt_fallback: "A driving scene from a forward-facing camera."
+  video_glob: "**/*.mp4"
+  latent_glob: "**/*.pt"
+  csv_glob: "**/*.csv"
+  num_frames: null
+  height: 384
+  width: 640
+  cache_metadata: true
+  force_rebuild: false
+  v_stop_thresh: 0.05
+  w_stop_thresh: 0.05
+  velocity_column: "v_calculated"
+  yaw_rate_column: "w_calculated"
+
+model:
+  pretrained_model_name_or_path: "BestWishYsh/Helios-Base"
+  revision: null
+  variant: null
+  scheduler_config_path: "scripts/accelerate_configs/scheduler_config.json"
+  mixed_precision: "bf16"
+  prefix_length: 8
+  prefix_init_std: 0.02
+
+generation:
+  history_sizes: [16, 2, 1]
+  latent_window_size: 9
+  num_inference_steps: 20
+  guidance_scale: 5.0
+  use_dynamic_shifting: false
+  time_shift_type: "linear"
+  is_keep_x0: true
+  is_enable_stage2: false
+  stage2_num_stages: 3
+  stage2_num_inference_steps_list: [10, 10, 10]
+  scheduler_type: "unipc"
+  num_generation_sections: 1
+  add_noise_to_video_latents: true
+  video_noise_sigma_min: 0.111
+  video_noise_sigma_max: 0.135
+  use_cfg_zero_star: false
+  use_zero_init: true
+  zero_steps: 1
+  use_kv_cache: false
+
+loss:
+  velocity_scale: 0.5
+  yaw_scale: 0.4
+  velocity_weight: 1.0
+  yaw_weight: 1.0
+  direction_weight: 0.5
+  action_ce_weight: 0.5
+  source_consistency_weight: 0.25
+  source_motion_weight: 0.25
+  temporal_smoothness_weight: 0.1
+  drift_weight: 0.05
+  use_non_diff_metrics: true
+  non_diff_metrics_every: 20
+
+train:
+  output_dir: "outputs/prefix_opt"
+  logging_dir: "logs"
+  seed: 43
+  train_batch_size: 1
+  eval_batch_size: 1
+  dataloader_num_workers: 2
+  pin_memory: true
+  persistent_workers: false
+  prefetch_factor: 2
+  max_train_steps: 1000
+  gradient_accumulation_steps: 1
+  learning_rate: 0.001
+  adam_beta1: 0.9
+  adam_beta2: 0.999
+  adam_weight_decay: 0.0001
+  adam_epsilon: 1.0e-8
+  max_grad_norm: 1.0
+  lr_scheduler: "constant"
+  lr_warmup_steps: 0
+  save_every: 100
+  eval_every: 100
+  max_eval_batches: 8
+  gradient_check_warmup_steps: 5
+  zero_grad_tolerance_steps: 3
+  allow_tf32: false
+  gradient_checkpointing: false
+  log_with: null
+
+inference:
+  output_path: "outputs/prefix_opt/infer.mp4"
+  fps: 24
+  disable_prefix: false
+

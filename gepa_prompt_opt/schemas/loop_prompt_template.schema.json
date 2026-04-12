@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/schemas/loop_prompt_template.schema.json",
+  "title": "Loop Prompt Template",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["template_version", "task", "components", "render"],
+  "properties": {
+    "template_version": { "type": "string" },
+    "task": { "type": "string", "const": "loop" },
+    "components": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role_instruction",
+        "action_description",
+        "loop_completion_requirement",
+        "temporal_consistency_constraints",
+        "scene_preservation_constraints",
+        "negative_constraints"
+      ],
+      "properties": {
+        "role_instruction": { "type": "string", "minLength": 1 },
+        "action_description": { "type": "string", "minLength": 1 },
+        "loop_completion_requirement": { "type": "string", "minLength": 1 },
+        "temporal_consistency_constraints": { "type": "string", "minLength": 1 },
+        "scene_preservation_constraints": { "type": "string", "minLength": 1 },
+        "negative_constraints": { "type": "string", "minLength": 1 }
+      }
+    },
+    "placeholders": { "type": "array", "items": { "type": "string" } },
+    "render": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["order", "separator"],
+      "properties": {
+        "order": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "role_instruction",
+              "action_description",
+              "loop_completion_requirement",
+              "temporal_consistency_constraints",
+              "scene_preservation_constraints",
+              "negative_constraints"
+            ]
+          },
+          "minItems": 6,
+          "maxItems": 6
+        },
+        "separator": { "type": "string", "default": "\n\n" },
+        "labels": { "type": "boolean", "default": false }
+      }
+    }
+  }
+}
+

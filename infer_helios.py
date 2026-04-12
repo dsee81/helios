@@ -5,6 +5,21 @@ import os
 os.environ["HF_ENABLE_PARALLEL_LOADING"] = "yes"
 os.environ["HF_PARALLEL_LOADING_WORKERS"] = "8"
 
+# --- MONKEY-PATCH: fix transformer class identity mismatch ---
+# Some environments load Helios' transformer class from the local `helios` package while the diffusers
+# pipeline does an `isinstance()` check against the diffusers module path, which can fail due to Python
+# treating them as distinct class objects. Patch diffusers to reference the local class before pipeline
+# construction.
+import helios.diffusers_version.transformer_helios_diffusers as _local_t
+import diffusers.models.transformers.transformer_helios as _diffusers_t
+
+_diffusers_t.HeliosTransformer3DModel = _local_t.HeliosTransformer3DModel
+import diffusers.models as _diffusers_models
+
+if hasattr(_diffusers_models, "HeliosTransformer3DModel"):
+    _diffusers_models.HeliosTransformer3DModel = _local_t.HeliosTransformer3DModel
+# --- END MONKEY-PATCH ---
+
 import argparse
 import time
 
@@ -38,11 +53,11 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Generate video with model")
 
     # === Model paths ===
-    parser.add_argument("--base_model_path", type=str, default="BestWishYsh/Helios-Base")
+    parser.add_argument("--base_model_path", type=str, default="/scratch/users/ntu/dsee009/Helios/Helios-Distilled")
     parser.add_argument(
         "--transformer_path",
         type=str,
-        default="BestWishYsh/Helios-Base",
+        default="/scratch/users/ntu/dsee009/Helios/Helios-Distilled",
     )
     parser.add_argument(
         "--lora_path",
@@ -80,6 +95,41 @@ def parse_args():
     parser.add_argument("--fps", type=int, default=24)
     parser.add_argument("--num_inference_steps", type=int, default=50)
     parser.add_argument("--guidance_scale", type=float, default=5.0)
+
+    # === DATE (inference-only) ===
+    # DATE-lite: no-grad, small heuristic update.
+    parser.add_argument(
+        "--use_date",
+        action="store_true",
+        help="Enable DATE-lite dynamic text embedding updates during sampling (inference-only).",
+    )
+    parser.add_argument(
+        "--date_strength",
+        type=float,
+        default=0.02,
+        help="DATE-lite update strength (small/stable; typical 0.01-0.05).",
+    )
+
+    # Gradient DATE: gradient-based update of text embeddings (no weight updates).
+    parser.add_argument(
+        "--use_date_grad",
+        action="store_true",
+        help="Enable gradient-based DATE (adapts text embeddings during sampling; inference-only).",
+    )
+    parser.add_argument(
+        "--date_lr",
+        type=float,
+        default=0.02,
+        help="Learning rate for gradient-based DATE embedding updates.",
+    )
+
+    # Shared update frequency for DATE / DATE-grad
+    parser.add_argument(
+        "--date_update_freq",
+        type=int,
+        default=2,
+        help="Update text embeddings every N denoising steps (default: 2).",
+    )
     # cfg zero
     parser.add_argument("--use_zero_init", action="store_true")
     parser.add_argument("--zero_steps", type=int, default=1)
@@ -172,8 +222,8 @@ def parse_args():
     )
     parser.add_argument(
         "--num_blocks_per_group",
-        type=str,
-        default="4",
+        type=int,
+        default=4,
         help="The number of blocks to bundle together in each offloading group. Only relevant when using block-level offloading.",
     )
 
@@ -182,6 +232,35 @@ def parse_args():
 
 def main():
     args = parse_args()
+
+    # Allow enabling DATE modes without changing shell scripts by using env vars.
+    # CLI args take precedence.
+    def _env_truthy(name: str) -> bool:
+        v = os.getenv(name)
+        if v is None:
+            return False
+        return v.strip().lower() in {"1", "true", "yes", "y", "on"}
+
+    if not args.use_date:
+        args.use_date = _env_truthy("HELIOS_USE_DATE")
+    if not args.use_date_grad:
+        args.use_date_grad = _env_truthy("HELIOS_USE_DATE_GRAD")
+
+    if args.date_strength == 0.02:
+        v = os.getenv("HELIOS_DATE_STRENGTH")
+        if v:
+            args.date_strength = float(v)
+    if args.date_lr == 0.02:
+        v = os.getenv("HELIOS_DATE_LR")
+        if v:
+            args.date_lr = float(v)
+    if args.date_update_freq == 2:
+        v = os.getenv("HELIOS_DATE_UPDATE_FREQ")
+        if v:
+            args.date_update_freq = int(v)
+
+    if args.use_date and args.use_date_grad:
+        raise ValueError("Only one DATE mode can be enabled at a time: choose --use_date or --use_date_grad.")
 
     assert not (args.enable_low_vram_mode and args.enable_compile), (
         "enable_low_vram_mode and enable_compile cannot be used together."
@@ -205,11 +284,27 @@ def main():
         device = torch.device("cuda", rank % torch.cuda.device_count())
         world_size = dist.get_world_size()
         torch.cuda.set_device(device)
-        assert world_size == 1 or not args.enable_low_vram_mode, "enable_low_vram_mode is only for single GPU."
+        if world_size > 1 and args.enable_low_vram_mode:
+            print(
+                "Warning: enable_low_vram_mode is enabled with multi-GPU. "
+                "This uses per-rank CPU offloading and may be slower.",
+                flush=True,
+            )
     else:
         rank = 0
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         world_size = 1
+
+    if not args.enable_parallelism or rank == 0:
+        if args.use_date:
+            print(
+                f"DATE enabled (lite, inference-only): strength={args.date_strength}, update_freq={args.date_update_freq}",
+                flush=True,
+            )
+        elif args.use_date_grad:
+            print("Gradient DATE enabled", flush=True)
+            print(f"DATE learning rate: {args.date_lr}", flush=True)
+            print(f"DATE update frequency: {args.date_update_freq}", flush=True)
 
     prompt = None
     image_path = None
@@ -341,6 +436,12 @@ def main():
                         num_frames=args.num_frames,
                         num_inference_steps=args.num_inference_steps,
                         guidance_scale=args.guidance_scale,
+                        # DATE (optional)
+                        use_date=args.use_date,
+                        date_strength=args.date_strength,
+                        use_date_grad=args.use_date_grad,
+                        date_lr=args.date_lr,
+                        date_update_freq=args.date_update_freq,
                         generator=torch.Generator(device="cuda").manual_seed(args.seed),
                         # stage 1
                         history_sizes=[16, 2, 1],
@@ -399,6 +500,12 @@ def main():
                         num_frames=args.num_frames,
                         num_inference_steps=args.num_inference_steps,
                         guidance_scale=args.guidance_scale,
+                        # DATE (optional)
+                        use_date=args.use_date,
+                        date_strength=args.date_strength,
+                        use_date_grad=args.use_date_grad,
+                        date_lr=args.date_lr,
+                        date_update_freq=args.date_update_freq,
                         generator=torch.Generator(device="cuda").manual_seed(args.seed),
                         # stage 1
                         history_sizes=[16, 2, 1],
@@ -468,6 +575,12 @@ def main():
                         num_frames=args.num_frames,
                         num_inference_steps=args.num_inference_steps,
                         guidance_scale=args.guidance_scale,
+                        # DATE (optional)
+                        use_date=args.use_date,
+                        date_strength=args.date_strength,
+                        use_date_grad=args.use_date_grad,
+                        date_lr=args.date_lr,
+                        date_update_freq=args.date_update_freq,
                         generator=torch.Generator(device="cuda").manual_seed(args.seed),
                         # stage 1
                         history_sizes=[16, 2, 1],
@@ -514,6 +627,12 @@ def main():
                 num_frames=args.num_frames,
                 num_inference_steps=args.num_inference_steps,
                 guidance_scale=args.guidance_scale,
+                # DATE (optional)
+                use_date=args.use_date,
+                date_strength=args.date_strength,
+                use_date_grad=args.use_date_grad,
+                date_lr=args.date_lr,
+                date_update_freq=args.date_update_freq,
                 generator=torch.Generator(device="cuda").manual_seed(args.seed),
                 # stage 1
                 history_sizes=[16, 2, 1],

@@ -13,14 +13,21 @@ try:
     print("Flash Attn 3 is installed!")
 except (ImportError, RuntimeError):
     try:
-        flash_attn2 = get_kernel("kernels-community/flash-attn2")
-        flash_attn_func = flash_attn2.flash_attn_func
-        flash_attn_varlen_func = flash_attn2.flash_attn_varlen_func
+        # Prefer the locally installed flash-attn package (does not require Hub access).
+        from flash_attn.flash_attn_interface import flash_attn_func, flash_attn_varlen_func
+
         print("Flash Attn 2 is installed!")
-    except ImportError:
-        print("Flash Attn 2 / 3 is not installed!")
-        flash_attn_varlen_func = None
-        flash_attn_func = None
+    except Exception:
+        try:
+            # Fallback: kernels-community packages (may require HF Hub download).
+            flash_attn2 = get_kernel("kernels-community/flash-attn2")
+            flash_attn_func = flash_attn2.flash_attn_func
+            flash_attn_varlen_func = flash_attn2.flash_attn_varlen_func
+            print("Flash Attn 2 is installed!")
+        except Exception:
+            print("Flash Attn 2 / 3 is not installed!")
+            flash_attn_varlen_func = None
+            flash_attn_func = None
 
 
 try:

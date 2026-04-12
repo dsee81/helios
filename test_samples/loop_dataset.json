@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "task": "loop",
+  "path_base": "..",
+  "default_task_type": "loop",
+  "videos": [
+    {
+      "id": 1,
+      "input_video_path": "eval/playground/toy-video/2_240_ori81.mp4",
+      "initial_prompt": "Move forward smoothly, make a loop, and return to the starting viewpoint by the end.",
+      "duration_seconds": 3.375,
+      "split": "train",
+      "variables": {
+        "scene": "toy-video sample 1",
+        "goal": "end at the starting viewpoint",
+        "route_hint": "move forward, arc around, and return"
+      }
+    },
+    {
+      "id": 2,
+      "input_video_path": "eval/playground/toy-video/239_120_ori129.mp4",
+      "initial_prompt": "Walk in a loop and return to the exact starting position and view by the end of the clip.",
+      "duration_seconds": 5.375,
+      "split": "train",
+      "variables": {
+        "scene": "toy-video sample 2",
+        "goal": "match the start view at the end",
+        "route_hint": "steady motion; complete a full loop"
+      }
+    }
+  ]
+}

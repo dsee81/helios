@@ -1,0 +1,60 @@
+{
+  "rating_scale": 10,
+  "summary": {
+    "non_drifting": {
+      "aesthetic": {
+        "name": "Aesthetic",
+        "raw_score": 0.41618257015943527,
+        "normalized_score": 0.41618257015943527,
+        "rating": 4,
+        "num_videos": 4
+      },
+      "motion_amplitude": {
+        "name": "Motion Amplitude",
+        "raw_score": 0.7500365525484085,
+        "normalized_score": 0.7500365525484085,
+        "rating": 10,
+        "num_videos": 4
+      },
+      "motion_smoothness": {
+        "name": "Motion Smoothness",
+        "raw_score": 0.9801423515983416,
+        "normalized_score": 0.9801423515983416,
+        "rating": 9,
+        "num_videos": 4
+      },
+      "semantic": {
+        "name": "Semantic",
+        "raw_score": 0.16825303807854652,
+        "normalized_score": 0.16825303807854652,
+        "rating": 1,
+        "num_videos": 4
+      }
+    },
+    "drifting": {
+      "drifting_aesthetic": {
+        "name": "Drifting Aesthetic",
+        "raw_score": 0.09029363095760345,
+        "normalized_score": 0.09029363095760345,
+        "rating": 1,
+        "num_videos": 4
+      },
+      "drifting_motion_smoothness": {
+        "name": "Drifting Motion Smoothness",
+        "raw_score": 0.009062606379357296,
+        "normalized_score": 0.009062606379357296,
+        "rating": 10,
+        "num_videos": 4
+      },
+      "drifting_semantic": {
+        "name": "Drifting Semantic",
+        "raw_score": 0.03420574963092804,
+        "normalized_score": 0.03420574963092804,
+        "rating": 7,
+        "num_videos": 4
+      }
+    },
+    "total_weighted_rating": 2.727
+  },
+  "per_video": {}
+}

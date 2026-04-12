@@ -224,6 +224,8 @@ class HeliosScheduler(SchedulerMixin, ConfigMixin):
             timesteps = (sigmas * self.config.num_train_timesteps).copy()
             sigmas = torch.from_numpy(sigmas)
         else:
+            if stage_index is None:
+                stage_index = 0
             stage_timesteps = self.timesteps_per_stage[stage_index]
             timesteps = np.linspace(
                 stage_timesteps[0].item(),
@@ -251,6 +253,8 @@ class HeliosScheduler(SchedulerMixin, ConfigMixin):
             if self.config.stages == 1:
                 self.timesteps = self.sigmas[:-1] * self.config.num_train_timesteps
             else:
+                if stage_index is None:
+                    stage_index = 0
                 self.timesteps = self.timesteps_per_stage[stage_index].min() + self.sigmas[:-1] * (
                     self.timesteps_per_stage[stage_index].max() - self.timesteps_per_stage[stage_index].min()
                 )

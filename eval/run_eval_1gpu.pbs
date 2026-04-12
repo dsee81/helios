@@ -1,0 +1,34 @@
+#!/bin/bash
+#PBS -N eval_results
+#PBS -P personal-dsee009
+#PBS -q normal
+#PBS -l select=1:ncpus=16:ngpus=1:mem=64gb
+#PBS -l walltime=01:00:00
+#PBS -j oe
+
+# 1. Load the same environment you use for training
+module load miniforge3
+source activate helios
+pip install --upgrade --force-reinstall setuptools
+pip install pkg_resources
+# 2. Move to your project directory
+cd /scratch/users/ntu/dsee009/Helios/eval
+chmod +x run_metrics.sh
+
+# 4. Configure experiment variables (edit these for new experiments)
+export INPUT_CSV="/scratch/users/ntu/dsee009/Helios/outputs/helios.csv"
+export BASE_OUTPUT_DIR="/scratch/users/ntu/dsee009/Helios/eval/playground/results"
+export EXPERIMENT_NAME="helios_exp_01"
+
+# If your CSV contains a column with per-row video paths, set it here (recommended).
+# Set to empty ("") to fall back to scanning VIDEO_DIR for `{id}_..._ori....mp4`.
+export VIDEO_PATH_COLUMN="video_path"
+export VIDEO_DIR="/scratch/users/ntu/dsee009/Helios/output_helios/"
+
+export TASK_TYPE="minor_scene_change"
+export SCORE_TYPE="rating"
+export PARALLEL_METRICS=0
+export RUN_NATURALNESS=0
+
+# 5. Run
+bash run_metrics.sh

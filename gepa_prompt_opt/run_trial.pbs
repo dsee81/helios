@@ -1,0 +1,34 @@
+#!/bin/bash
+#PBS -N GEPA_Helios_Opt
+#PBS -P personal-dsee009
+#PBS -q normal
+#PBS -l select=1:ncpus=16:ngpus=1:mem=64gb
+#PBS -l walltime=04:00:00
+#PBS -j oe
+
+# 1. Load system modules
+module load miniforge3
+eval "$(conda shell.bash hook)"
+
+# 2. Activate your persistent environment in the visible directory
+conda activate /home/users/ntu/dsee009/conda_envs/helios
+
+# 3. Clean environment variables to prevent "prefix" errors
+unset PYTHONHOME
+unset PYTHONPATH
+
+# 4. Navigate to your Helios project directory
+cd /scratch/users/ntu/dsee009/Helios
+
+# 5. Run the GEPA Prompt Optimization Loop
+# For DeepSeek proposer (default), set:
+# export DEEPSEEK_API_KEY="..."
+python -m gepa_prompt_opt.cli optimize-loop \
+  --repo_root /scratch/users/ntu/dsee009/Helios \
+  --dataset_manifest test_samples/loop_dataset.json \
+  --seed_template test_samples/seed_loop_template.json \
+  --work_dir gepa_prompt_opt/runs/test_samples_loop_01 \
+  --num_iterations 1 \
+  --candidates_per_iteration 1 \
+  --num_frames 240 \
+  --reflection_lm deepseek/deepseek-chat
