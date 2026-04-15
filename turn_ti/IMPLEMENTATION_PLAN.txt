@@ -1,0 +1,77 @@
+Turn-TI implementation plan for Helios
+=====================================
+
+Goal
+----
+Build a frozen-model, single-GPU-first conditioning module that learns a reusable turn-bin embedding bank in Helios prompt-embedding space. The target bins come from the 2-signal chunk analysis:
+
+1. right_gentle
+2. right_strong
+3. straight_stable
+4. straight_wobbly
+5. left_gentle
+6. left_strong
+
+Design decisions
+----------------
+- Keep Helios frozen.
+- Learn only a small bank of turn-conditioned prompt vectors.
+- Reuse the existing Helios V2V generator path from `prefix_opt`.
+- Use prompt-embedding-space conditioning, not tokenizer surgery.
+- Use manifest-driven data loading so path alignment is explicit.
+- Restrict the MVP to one process / one GPU.
+
+Implemented components
+----------------------
+1. `bins.py`
+   Canonical 6-bin naming and ID mapping.
+
+2. `config.py`
+   Typed config sections for data, model, generation, loss, train, and inference settings.
+
+3. `conditioning.py`
+   `TurnBinEmbeddingBank` stores one multi-vector embedding bank per bin.
+   Initialization comes from frozen Helios text embeddings of natural-language phrases.
+   The learned bank is prepended to normal prompt embeddings at runtime.
+
+4. `dataset.py`
+   `TurnBinLatentVideoDataset` loads:
+   - manifest rows
+   - latent `.pt` payloads with `prompt_embed` and `vae_latent`
+   - source videos for reconstruction-style supervision
+
+5. `losses.py`
+   MVP loss stack:
+   - source reconstruction loss
+   - anchor loss back to initialization phrases
+   - neighbor smoothness loss across adjacent bins
+   - temporal smoothness loss on generated video
+
+6. `checkpointing.py`
+   Save/load checkpoint files containing only the turn-bin embedding bank and optimizer state.
+
+7. `train.py`
+   Single-GPU training entrypoint using `Accelerator`.
+   The code asserts one-process operation when `single_gpu_only` is enabled.
+
+8. `infer.py`
+   Single-sample inference entrypoint for selecting one of the 6 bins.
+
+9. `manifest.py`
+   Utility to turn the chunk-bin CSV into a training manifest by matching:
+   - CSV sample IDs
+   - video files
+   - latent `.pt` files
+
+Current assumptions
+-------------------
+- Latent `.pt` files already exist and contain `prompt_embed`, `vae_latent`, and optionally `prompt_raw`.
+- Manifest rows explicitly point to the correct source video and latent file for each chunk.
+- The first implementation uses one GPU by default because B200 memory is valuable and the generator path is still heavy.
+
+Near-term next steps
+--------------------
+1. Build the first real manifest from the chunk-bin CSV plus available video/latent roots.
+2. Run a one-step / few-step smoke test on a single B200.
+3. Verify checkpoint save/load and inference path.
+4. If training signal is too weak, add a motion-aware auxiliary loss while keeping Helios frozen.

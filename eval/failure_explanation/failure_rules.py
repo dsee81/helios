@@ -220,18 +220,28 @@ def loop_closure_failure_condition(metrics, task_type, vlm_judgments):
         return False
     task_specific = metrics.get("task_specific_metrics", {})
     endpoint_sim = task_specific.get("endpoint_similarity", 1.0)
-    return endpoint_sim < 0.7
+    vlm_failed = False
+    if vlm_judgments:
+        vlm_failed = vlm_judgments.get("loop_closure_achieved") is False
+        endpoint_sim = task_specific.get("endpoint_similarity", vlm_judgments.get("endpoint_similarity", endpoint_sim))
+    return endpoint_sim < 0.7 or vlm_failed
 
 def loop_closure_failure_severity(metrics, task_type, vlm_judgments):
     task_specific = metrics.get("task_specific_metrics", {})
     sim = task_specific.get("endpoint_similarity", 1.0)
+    if vlm_judgments:
+        sim = task_specific.get("endpoint_similarity", vlm_judgments.get("endpoint_similarity", sim))
     return normalize_severity(sim, 0.7, 1.0, invert=True)
 
 def loop_closure_failure_evidence(metrics, task_type, vlm_judgments):
     task_specific = metrics.get("task_specific_metrics", {})
-    return {
+    evidence = {
         "endpoint_similarity": task_specific.get("endpoint_similarity")
     }
+    if vlm_judgments:
+        evidence["vlm_loop_closure_achieved"] = vlm_judgments.get("loop_closure_achieved")
+        evidence["vlm_loop_closure_score"] = vlm_judgments.get("loop_closure_score")
+    return evidence
 
 RULES.append(FailureRule(
     "loop_closure_failure",

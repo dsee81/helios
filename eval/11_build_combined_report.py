@@ -145,7 +145,7 @@ def main(args: argparse.Namespace) -> int:
 
         prompt_text = prompt_per_id.get(vid, "")
         task_type = task_type_per_id.get(vid, args.task_type)
-        video_path = _infer_video_path_for_id(vid, video_path_per_id, per_video_meta)
+        video_path = None if args.disable_vlm else _infer_video_path_for_id(vid, video_path_per_id, per_video_meta)
 
         report = None
         if failure_raw_metrics:
@@ -194,6 +194,7 @@ if __name__ == "__main__":
     parser.add_argument("--task_type_column", type=str, default=None)
 
     parser.add_argument("--write_individual_reports", action="store_true")
+    parser.add_argument("--disable_vlm", action="store_true")
     parser.add_argument("--output_json", type=str, default=None)
     args = parser.parse_args()
     raise SystemExit(main(args))

@@ -18,6 +18,16 @@ def main(argv: list[str] | None = None) -> int:
     opt.add_argument("--num_iterations", type=int, default=10)
     opt.add_argument("--candidates_per_iteration", type=int, default=4)
     opt.add_argument("--num_frames", type=int, default=240)
+    opt.add_argument("--fps", type=int, default=24)
+    opt.add_argument("--inference_cuda_visible_devices", type=str, default="0")
+    opt.add_argument(
+        "--eval_split",
+        type=str,
+        choices=["train", "dev", "test", "all"],
+        default="train",
+    )
+    opt.add_argument("--disable_vlm", action="store_true")
+    opt.add_argument("--disable_naturalness", action="store_true")
     opt.add_argument(
         "--reflection_lm",
         type=str,
@@ -35,7 +45,12 @@ def main(argv: list[str] | None = None) -> int:
             seed_template=Path(args.seed_template),
             num_iterations=int(args.num_iterations),
             candidates_per_iteration=int(args.candidates_per_iteration),
+            inference_cuda_visible_devices=str(args.inference_cuda_visible_devices),
             num_frames=int(args.num_frames),
+            fps=int(args.fps),
+            eval_split=str(args.eval_split),
+            disable_vlm=bool(args.disable_vlm),
+            run_naturalness=not bool(args.disable_naturalness),
             reflection_lm=str(args.reflection_lm),
         )
         optimize_with_gepa(cfg)

@@ -1,0 +1,60 @@
+data:
+  manifest_path: /mnt/shared_storage/dsee/Helios/data/turn_ti_manifest.csv
+  prompt_fallback: A driving scene from a forward-facing camera.
+  num_frames: 81
+  height: 384
+  width: 640
+  cache_metadata: true
+  force_rebuild: false
+  strict_paths: true
+
+model:
+  pretrained_model_name_or_path: BestWishYsh/Helios-Base
+  scheduler_config_path: /mnt/shared_storage/dsee/Helios/scripts/accelerate_configs/scheduler_config.json
+  mixed_precision: bf16
+  num_bins: 6
+  num_vectors: 4
+  init_scale: 0.01
+  learnable_delta: true
+  bin_names:
+    - right_gentle
+    - right_strong
+    - straight_stable
+    - straight_wobbly
+    - left_gentle
+    - left_strong
+  init_phrases:
+    - a driving scene with a gentle right turn
+    - a driving scene with a strong right turn
+    - a driving scene moving straight and stable
+    - a driving scene moving straight with slight wobble
+    - a driving scene with a gentle left turn
+    - a driving scene with a strong left turn
+
+generation:
+  history_sizes: [16, 2, 1]
+  latent_window_size: 9
+  num_inference_steps: 6
+  guidance_scale: 5.0
+  num_generation_sections: 1
+
+loss:
+  reconstruction_weight: 1.0
+  anchor_weight: 0.1
+  neighbor_smoothness_weight: 0.05
+  temporal_smoothness_weight: 0.05
+
+train:
+  output_dir: /mnt/shared_storage/dsee/Helios/output_helios/turn_ti
+  logging_dir: logs
+  train_batch_size: 1
+  dataloader_num_workers: 2
+  max_train_steps: 200
+  learning_rate: 5.0e-4
+  save_every: 50
+  single_gpu_only: true
+
+inference:
+  output_path: /mnt/shared_storage/dsee/Helios/output_helios/turn_ti/infer.mp4
+  fps: 24
+  disable_bank: false

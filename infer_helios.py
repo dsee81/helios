@@ -53,11 +53,11 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Generate video with model")
 
     # === Model paths ===
-    parser.add_argument("--base_model_path", type=str, default="/scratch/users/ntu/dsee009/Helios/Helios-Distilled")
+    parser.add_argument("--base_model_path", type=str, default="/root/dataDisk/BestWishYSH/Helios-Distilled")
     parser.add_argument(
         "--transformer_path",
         type=str,
-        default="/scratch/users/ntu/dsee009/Helios/Helios-Distilled",
+        default="/root/dataDisk/BestWishYSH/Helios-Distilled",
     )
     parser.add_argument(
         "--lora_path",
@@ -129,6 +129,24 @@ def parse_args():
         type=int,
         default=2,
         help="Update text embeddings every N denoising steps (default: 2).",
+    )
+    parser.add_argument(
+        "--date_grad_spatial_downsample",
+        type=int,
+        default=2,
+        help="Downsample factor used only for DATE-grad surrogate forwards to reduce memory.",
+    )
+    parser.add_argument(
+        "--date_grad_max_frames",
+        type=int,
+        default=17,
+        help="Maximum number of frames used in DATE-grad surrogate forwards.",
+    )
+    parser.add_argument(
+        "--date_grad_max_stage",
+        type=int,
+        default=0,
+        help="Highest pyramid stage index where DATE-grad is allowed. Default 0 keeps updates on the lowest-res stage.",
     )
     # cfg zero
     parser.add_argument("--use_zero_init", action="store_true")
@@ -305,6 +323,12 @@ def main():
             print("Gradient DATE enabled", flush=True)
             print(f"DATE learning rate: {args.date_lr}", flush=True)
             print(f"DATE update frequency: {args.date_update_freq}", flush=True)
+            print(
+                "DATE grad memory saver: "
+                f"spatial_downsample={args.date_grad_spatial_downsample}, "
+                f"max_frames={args.date_grad_max_frames}, max_stage={args.date_grad_max_stage}",
+                flush=True,
+            )
 
     prompt = None
     image_path = None
@@ -336,8 +360,16 @@ def main():
         transformer = replace_rmsnorm_with_fp32(transformer)
         transformer = replace_all_norms_with_flash_norms(transformer)
         replace_rope_with_flash_rope()
-    cuda_major = torch.cuda.get_device_capability()[0]
-    if cuda_major >= 9:
+    requested_backend = os.environ.get("HELIOS_ATTENTION_BACKEND", "").strip().lower()
+    cuda_major, cuda_minor = torch.cuda.get_device_capability()
+    if requested_backend:
+        transformer.set_attention_backend(requested_backend)
+    elif (cuda_major, cuda_minor) >= (10, 0):
+        # B200 / Blackwell-class GPUs report SM100. The downloaded FA3 hub kernel
+        # used by this repo only advertises support through SM90a, so selecting
+        # it on SM100 raises "no kernel image is available for execution on the device".
+        transformer.set_attention_backend("native")
+    elif cuda_major >= 9:
         # H100/H800 (SM90+) with FA3
         try:
             transformer.set_attention_backend("_flash_3_hub")
@@ -442,6 +474,9 @@ def main():
                         use_date_grad=args.use_date_grad,
                         date_lr=args.date_lr,
                         date_update_freq=args.date_update_freq,
+                        date_grad_spatial_downsample=args.date_grad_spatial_downsample,
+                        date_grad_max_frames=args.date_grad_max_frames,
+                        date_grad_max_stage=args.date_grad_max_stage,
                         generator=torch.Generator(device="cuda").manual_seed(args.seed),
                         # stage 1
                         history_sizes=[16, 2, 1],
@@ -474,7 +509,7 @@ def main():
                 except Exception:
                     continue
             if not args.enable_parallelism or rank == 0:
-                export_to_video(output, output_path, fps=24)
+                export_to_video(output, output_path, fps=args.fps)
     elif args.image_prompt_csv_path is not None:
         df = pd.read_csv(args.image_prompt_csv_path)
         if not args.enable_parallelism:
@@ -506,6 +541,9 @@ def main():
                         use_date_grad=args.use_date_grad,
                         date_lr=args.date_lr,
                         date_update_freq=args.date_update_freq,
+                        date_grad_spatial_downsample=args.date_grad_spatial_downsample,
+                        date_grad_max_frames=args.date_grad_max_frames,
+                        date_grad_max_stage=args.date_grad_max_stage,
                         generator=torch.Generator(device="cuda").manual_seed(args.seed),
                         # stage 1
                         history_sizes=[16, 2, 1],
@@ -538,7 +576,7 @@ def main():
                 except Exception:
                     continue
             if not args.enable_parallelism or rank == 0:
-                export_to_video(output, output_path, fps=24)
+                export_to_video(output, output_path, fps=args.fps)
     elif args.interactive_prompt_csv_path is not None:
         df = pd.read_csv(args.interactive_prompt_csv_path)
 
@@ -581,6 +619,9 @@ def main():
                         use_date_grad=args.use_date_grad,
                         date_lr=args.date_lr,
                         date_update_freq=args.date_update_freq,
+                        date_grad_spatial_downsample=args.date_grad_spatial_downsample,
+                        date_grad_max_frames=args.date_grad_max_frames,
+                        date_grad_max_stage=args.date_grad_max_stage,
                         generator=torch.Generator(device="cuda").manual_seed(args.seed),
                         # stage 1
                         history_sizes=[16, 2, 1],
@@ -613,7 +654,7 @@ def main():
                 except Exception:
                     continue
             if not args.enable_parallelism or rank == 0:
-                export_to_video(output, output_path, fps=24)
+                export_to_video(output, output_path, fps=args.fps)
     else:
         with torch.no_grad():
             # import time
@@ -633,6 +674,9 @@ def main():
                 use_date_grad=args.use_date_grad,
                 date_lr=args.date_lr,
                 date_update_freq=args.date_update_freq,
+                date_grad_spatial_downsample=args.date_grad_spatial_downsample,
+                date_grad_max_frames=args.date_grad_max_frames,
+                date_grad_max_stage=args.date_grad_max_stage,
                 generator=torch.Generator(device="cuda").manual_seed(args.seed),
                 # stage 1
                 history_sizes=[16, 2, 1],
@@ -670,7 +714,7 @@ def main():
             output_path = os.path.join(
                 args.output_folder, f"{file_count:04d}_{args.sample_type}_{int(time.time())}.mp4"
             )
-            export_to_video(output, output_path, fps=24)
+            export_to_video(output, output_path, fps=args.fps)
 
     print(f"Max memory: {torch.cuda.max_memory_allocated() / 1024**3:.3f} GB")
 

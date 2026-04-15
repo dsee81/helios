@@ -31,13 +31,8 @@ class PromptTemplate:
         return self.raw["render"]
 
 
-def load_template(repo_root: str | Path, template_path: str | Path) -> PromptTemplate:
+def validate_template_data(repo_root: str | Path, data: dict[str, Any]) -> PromptTemplate:
     repo_root = Path(repo_root).resolve()
-    template_path = Path(template_path)
-    if not template_path.is_absolute():
-        template_path = (repo_root / template_path).resolve()
-
-    data = read_json(template_path)
     schema_path = repo_root / "gepa_prompt_opt" / "schemas" / "loop_prompt_template.schema.json"
     validate_with_jsonschema(data, schema_path)
 
@@ -45,6 +40,16 @@ def load_template(repo_root: str | Path, template_path: str | Path) -> PromptTem
         raise ValueError(f"Template task must be 'loop'. Got: {data.get('task')!r}")
     _validate_structure(data)
     return PromptTemplate(raw=data)
+
+
+def load_template(repo_root: str | Path, template_path: str | Path) -> PromptTemplate:
+    repo_root = Path(repo_root).resolve()
+    template_path = Path(template_path)
+    if not template_path.is_absolute():
+        template_path = (repo_root / template_path).resolve()
+
+    data = read_json(template_path)
+    return validate_template_data(repo_root, data)
 
 
 def _validate_structure(data: dict[str, Any]) -> None:

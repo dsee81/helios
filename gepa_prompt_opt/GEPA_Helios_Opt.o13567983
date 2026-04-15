@@ -1,903 +1,0 @@
-=== Helios Eval Pipeline ===
-INPUT_CSV=/scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval/eval_input.csv
-EXPERIMENT_NAME=candidate
-EXPERIMENT_OUTPUT_DIR=/scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate
-TASK_TYPE=loop
-GPU_ID=0
-NUM_WORKERS=8
-SCORE_TYPE=rating
-VIDEO_PATH_COLUMN=video_path
-PARALLEL_METRICS=0
-RUN_NATURALNESS=0
-DRY_RUN=0
---- Running: Aesthetic ---
-/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/clip/clip.py:6: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
-  from pkg_resources import packaging
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/aesthetic_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Motion Amplitude ---
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/motion_amplitude_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Motion Smoothness ---
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/motion_smoothness_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Semantic ---
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/semantic_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Drifting Aesthetic ---
-/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/clip/clip.py:6: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
-  from pkg_resources import packaging
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/drifting_aesthetic_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Drifting Motion Smoothness ---
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/drifting_motion_smoothness_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Drifting Semantic ---
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/drifting_semantic_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Stage 1 merge (9_merge_all_scores.py) ---
-
-Calculating Weighted Total Rating (Long):
-  - aesthetic: 9 * 0.03 = 0.2700
-  - motion_amplitude: 5 * 0.03 = 0.1500
-  - motion_smoothness: 9 * 0.03 = 0.2700
-  - semantic: 1 * 0.255 = 0.2550
-  ⚠ Warning: Metric 'naturalness' missing for weighting!
-  - drifting_aesthetic: 5 * 0.099 = 0.4950
-  - drifting_motion_smoothness: 9 * 0.099 = 0.8910
-  - drifting_semantic: 10 * 0.099 = 0.9900
-  ⚠ Warning: Metric 'drifting_naturalness' missing for weighting!
-
->>> FINAL WEIGHTED RATING: 3.321
-
---- Stage 2 failure explanation + combined report (11_build_combined_report.py) ---
-Loading weights:   0%|          | 0/729 [00:00<?, ?it/s]Loading weights:   0%|          | 1/729 [00:07<1:31:05,  7.51s/it]Loading weights:   0%|          | 2/729 [00:11<1:05:58,  5.45s/it]Loading weights:   6%|▌         | 41/729 [00:11<01:56,  5.89it/s] Loading weights:   6%|▋         | 47/729 [00:12<01:43,  6.59it/s]Loading weights:   7%|▋         | 52/729 [00:13<01:55,  5.87it/s]Loading weights:   9%|▉         | 64/729 [00:14<01:33,  7.12it/s]Loading weights:   9%|▉         | 67/729 [00:15<01:39,  6.66it/s]Loading weights:  10%|█         | 76/729 [00:16<01:31,  7.11it/s]Loading weights:  11%|█         | 78/729 [00:16<01:28,  7.39it/s]Loading weights:  12%|█▏        | 88/729 [00:17<01:24,  7.61it/s]Loading weights:  12%|█▏        | 90/729 [00:17<01:20,  7.96it/s]Loading weights:  14%|█▎        | 100/729 [00:19<01:14,  8.41it/s]Loading weights:  14%|█▍        | 102/729 [00:19<01:14,  8.40it/s]Loading weights:  15%|█▌        | 112/729 [00:20<01:23,  7.41it/s]Loading weights:  16%|█▌        | 114/729 [00:21<01:20,  7.65it/s]Loading weights:  17%|█▋        | 124/729 [00:22<01:13,  8.21it/s]Loading weights:  17%|█▋        | 125/729 [00:22<01:13,  8.24it/s]Loading weights:  19%|█▊        | 136/729 [00:23<01:04,  9.21it/s]Loading weights:  20%|██        | 148/729 [00:24<01:07,  8.65it/s]Loading weights:  20%|██        | 149/729 [00:24<01:08,  8.49it/s]Loading weights:  22%|██▏       | 160/729 [00:26<01:04,  8.84it/s]Loading weights:  22%|██▏       | 161/729 [00:26<01:14,  7.60it/s]Loading weights:  24%|██▎       | 172/729 [00:27<01:05,  8.50it/s]Loading weights:  24%|██▍       | 174/729 [00:28<01:10,  7.91it/s]Loading weights:  25%|██▌       | 184/729 [00:29<01:11,  7.66it/s]Loading weights:  27%|██▋       | 196/729 [00:30<01:07,  7.92it/s]Loading weights:  29%|██▊       | 208/729 [00:32<01:10,  7.43it/s]Loading weights:  29%|██▉       | 210/729 [00:33<01:10,  7.34it/s]Loading weights:  30%|███       | 220/729 [00:33<01:01,  8.26it/s]Loading weights:  30%|███       | 221/729 [00:34<01:03,  7.98it/s]Loading weights:  32%|███▏      | 232/729 [00:35<00:53,  9.25it/s]Loading weights:  32%|███▏      | 233/729 [00:35<00:58,  8.41it/s]Loading weights:  32%|███▏      | 234/729 [00:35<00:59,  8.37it/s]Loading weights:  33%|███▎      | 244/729 [00:36<00:52,  9.16it/s]Loading weights:  34%|███▎      | 246/729 [00:36<00:59,  8.18it/s]Loading weights:  35%|███▌      | 256/729 [00:37<00:50,  9.31it/s]Loading weights:  35%|███▌      | 258/729 [00:38<00:53,  8.81it/s]Loading weights:  37%|███▋      | 268/729 [00:39<01:03,  7.24it/s]Loading weights:  37%|███▋      | 270/729 [00:40<01:00,  7.60it/s]Loading weights:  38%|███▊      | 280/729 [00:40<00:50,  8.95it/s]Loading weights:  39%|███▊      | 281/729 [00:41<00:59,  7.56it/s]Loading weights:  40%|████      | 292/729 [00:42<00:53,  8.09it/s]Loading weights:  40%|████      | 294/729 [00:42<00:56,  7.75it/s]Loading weights:  42%|████▏     | 304/729 [00:43<00:47,  8.92it/s]Loading weights:  42%|████▏     | 305/729 [00:44<00:50,  8.35it/s]Loading weights:  43%|████▎     | 316/729 [00:45<00:46,  8.81it/s]Loading weights:  43%|████▎     | 317/729 [00:45<00:46,  8.82it/s]Loading weights:  45%|████▍     | 328/729 [00:47<00:52,  7.60it/s]Loading weights:  47%|████▋     | 345/729 [00:47<00:28, 13.51it/s]Loading weights:  48%|████▊     | 349/729 [00:47<00:25, 14.90it/s]Loading weights:  49%|████▊     | 355/729 [00:47<00:23, 15.88it/s]Loading weights:  50%|████▉     | 361/729 [00:47<00:18, 19.55it/s]Loading weights:  50%|█████     | 365/729 [00:48<00:17, 20.75it/s]Loading weights:  51%|█████     | 369/729 [00:48<00:16, 21.38it/s]Loading weights:  51%|█████     | 373/729 [00:48<00:16, 22.23it/s]Loading weights:  52%|█████▏    | 381/729 [00:48<00:11, 30.50it/s]Loading weights:  53%|█████▎    | 386/729 [00:48<00:11, 31.12it/s]Loading weights:  54%|█████▍    | 393/729 [00:48<00:09, 34.65it/s]Loading weights:  55%|█████▌    | 403/729 [00:49<00:08, 38.34it/s]Loading weights:  57%|█████▋    | 413/729 [00:49<00:06, 47.41it/s]Loading weights:  57%|█████▋    | 419/729 [00:49<00:07, 42.15it/s]Loading weights:  59%|█████▊    | 427/729 [00:49<00:07, 38.13it/s]Loading weights:  60%|██████    | 439/729 [00:49<00:07, 40.13it/s]Loading weights:  61%|██████    | 444/729 [00:50<00:07, 39.54it/s]Loading weights:  62%|██████▏   | 451/729 [00:50<00:06, 43.68it/s]Loading weights:  63%|██████▎   | 456/729 [00:50<00:06, 40.77it/s]Loading weights:  64%|██████▎   | 463/729 [00:50<00:05, 46.72it/s]Loading weights:  64%|██████▍   | 469/729 [00:50<00:07, 35.10it/s]Loading weights:  66%|██████▌   | 479/729 [00:50<00:07, 35.18it/s]Loading weights:  67%|██████▋   | 487/729 [00:51<00:05, 42.20it/s]Loading weights:  68%|██████▊   | 493/729 [00:51<00:05, 41.40it/s]Loading weights:  68%|██████▊   | 499/729 [00:51<00:05, 39.65it/s]Loading weights:  70%|███████   | 511/729 [00:51<00:04, 44.30it/s]Loading weights:  71%|███████   | 516/729 [00:51<00:04, 44.28it/s]Loading weights:  72%|███████▏  | 523/729 [00:52<00:05, 35.84it/s]Loading weights:  72%|███████▏  | 527/729 [00:52<00:05, 36.26it/s]Loading weights:  73%|███████▎  | 535/729 [00:52<00:06, 28.87it/s]Loading weights:  74%|███████▍  | 539/729 [00:52<00:06, 29.11it/s]Loading weights:  75%|███████▌  | 549/729 [00:52<00:04, 38.55it/s]Loading weights:  77%|███████▋  | 559/729 [00:53<00:04, 36.25it/s]Loading weights:  78%|███████▊  | 571/729 [00:53<00:04, 37.40it/s]Loading weights:  79%|███████▉  | 577/729 [00:53<00:03, 38.77it/s]Loading weights:  80%|███████▉  | 583/729 [00:53<00:03, 40.69it/s]Loading weights:  81%|████████  | 589/729 [00:53<00:04, 33.98it/s]Loading weights:  82%|████████▏ | 595/729 [00:54<00:04, 33.42it/s]Loading weights:  82%|████████▏ | 599/729 [00:54<00:04, 32.14it/s]Loading weights:  83%|████████▎ | 607/729 [00:54<00:03, 38.59it/s]Loading weights:  85%|████████▍ | 617/729 [00:54<00:02, 49.42it/s]Loading weights:  85%|████████▌ | 623/729 [00:54<00:02, 39.13it/s]Loading weights:  87%|████████▋ | 631/729 [00:54<00:02, 43.86it/s]Loading weights:  87%|████████▋ | 636/729 [00:54<00:02, 44.47it/s]Loading weights:  88%|████████▊ | 643/729 [00:55<00:01, 46.46it/s]Loading weights:  90%|████████▉ | 655/729 [00:55<00:01, 47.71it/s]Loading weights:  91%|█████████▏| 667/729 [00:55<00:01, 50.24it/s]Loading weights:  93%|█████████▎| 679/729 [00:55<00:00, 55.57it/s]Loading weights:  95%|█████████▍| 691/729 [00:55<00:00, 54.28it/s]Loading weights:  96%|█████████▋| 703/729 [00:56<00:00, 50.35it/s]Loading weights:  98%|█████████▊| 717/729 [00:56<00:00, 58.61it/s]Loading weights:  99%|█████████▉| 724/729 [00:56<00:00, 57.15it/s]Loading weights: 100%|██████████| 729/729 [00:57<00:00, 12.77it/s]
-The module name  (originally ) is not a valid Python identifier. Please rename the original module to avoid import issues.
-Wrote combined report: /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/combined_video_report.json
-=== Helios Eval Pipeline ===
-INPUT_CSV=/scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval/eval_input.csv
-EXPERIMENT_NAME=candidate
-EXPERIMENT_OUTPUT_DIR=/scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate
-TASK_TYPE=loop
-GPU_ID=0
-NUM_WORKERS=8
-SCORE_TYPE=rating
-VIDEO_PATH_COLUMN=video_path
-PARALLEL_METRICS=0
-RUN_NATURALNESS=0
-DRY_RUN=0
---- Running: Aesthetic ---
-/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/clip/clip.py:6: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
-  from pkg_resources import packaging
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/aesthetic_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Motion Amplitude ---
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/motion_amplitude_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Motion Smoothness ---
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/motion_smoothness_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Semantic ---
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/semantic_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Drifting Aesthetic ---
-/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/clip/clip.py:6: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
-  from pkg_resources import packaging
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/drifting_aesthetic_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Drifting Motion Smoothness ---
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/drifting_motion_smoothness_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Drifting Semantic ---
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/drifting_semantic_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Stage 1 merge (9_merge_all_scores.py) ---
-
-Calculating Weighted Total Rating (Long):
-  - aesthetic: 9 * 0.03 = 0.2700
-  - motion_amplitude: 5 * 0.03 = 0.1500
-  - motion_smoothness: 9 * 0.03 = 0.2700
-  - semantic: 1 * 0.255 = 0.2550
-  ⚠ Warning: Metric 'naturalness' missing for weighting!
-  - drifting_aesthetic: 5 * 0.099 = 0.4950
-  - drifting_motion_smoothness: 9 * 0.099 = 0.8910
-  - drifting_semantic: 10 * 0.099 = 0.9900
-  ⚠ Warning: Metric 'drifting_naturalness' missing for weighting!
-
->>> FINAL WEIGHTED RATING: 3.321
-
---- Stage 2 failure explanation + combined report (11_build_combined_report.py) ---
-Loading weights:   0%|          | 0/729 [00:00<?, ?it/s]Loading weights:   0%|          | 1/729 [00:00<03:46,  3.22it/s]Loading weights:   0%|          | 2/729 [00:00<02:19,  5.22it/s]Loading weights:   4%|▍         | 28/729 [00:00<00:08, 80.38it/s]Loading weights:   5%|▌         | 40/729 [00:00<00:07, 90.07it/s]Loading weights:   7%|▋         | 54/729 [00:00<00:06, 103.01it/s]Loading weights:   9%|▉         | 66/729 [00:00<00:06, 107.76it/s]Loading weights:  11%|█         | 78/729 [00:00<00:06, 107.73it/s]Loading weights:  12%|█▏        | 90/729 [00:01<00:06, 97.06it/s] Loading weights:  15%|█▌        | 112/729 [00:01<00:05, 118.68it/s]Loading weights:  17%|█▋        | 125/729 [00:01<00:05, 111.79it/s]Loading weights:  20%|██        | 148/729 [00:01<00:04, 117.72it/s]Loading weights:  22%|██▏       | 160/729 [00:01<00:04, 115.51it/s]Loading weights:  24%|██▎       | 172/729 [00:01<00:05, 110.24it/s]Loading weights:  25%|██▌       | 184/729 [00:01<00:04, 109.67it/s]Loading weights:  27%|██▋       | 197/729 [00:02<00:04, 109.74it/s]Loading weights:  29%|██▉       | 210/729 [00:02<00:04, 113.07it/s]Loading weights:  30%|███       | 222/729 [00:02<00:04, 108.37it/s]Loading weights:  32%|███▏      | 234/729 [00:02<00:04, 105.89it/s]Loading weights:  35%|███▌      | 256/729 [00:02<00:03, 118.59it/s]Loading weights:  37%|███▋      | 269/729 [00:02<00:03, 118.66it/s]Loading weights:  39%|███▊      | 281/729 [00:02<00:03, 117.47it/s]Loading weights:  40%|████      | 293/729 [00:02<00:04, 102.91it/s]Loading weights:  43%|████▎     | 316/729 [00:03<00:03, 113.85it/s]Loading weights:  45%|████▌     | 330/729 [00:03<00:03, 117.30it/s]Loading weights:  63%|██████▎   | 457/729 [00:03<00:00, 397.64it/s]Loading weights:  80%|███████▉  | 583/729 [00:03<00:00, 608.03it/s]Loading weights:  96%|█████████▌| 701/729 [00:03<00:00, 758.26it/s]Loading weights: 100%|██████████| 729/729 [00:03<00:00, 206.95it/s]
-The module name  (originally ) is not a valid Python identifier. Please rename the original module to avoid import issues.
-Wrote combined report: /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/combined_video_report.json
-Loading gepa state from run dir
-Iteration 0: Base program full valset score: 1.477556822408989 over 1 / 1 examples
-Iteration 1: Selected program 0 score: 1.477556822408989
-
-[1;31mGive Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new[0m
-LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()'.
-
-
-[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
-
-Iteration 1: Exception during reflection/proposal: litellm.InternalServerError: InternalServerError: DeepseekException - [Errno 104] Connection reset by peer
-Traceback (most recent call last):
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
-    yield
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_transports/default.py", line 250, in handle_request
-    resp = self._pool.handle_request(req)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpcore/_sync/connection_pool.py", line 256, in handle_request
-    raise exc from None
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpcore/_sync/connection_pool.py", line 236, in handle_request
-    response = connection.handle_request(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpcore/_sync/connection.py", line 101, in handle_request
-    raise exc
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpcore/_sync/connection.py", line 78, in handle_request
-    stream = self._connect(request)
-             ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpcore/_sync/connection.py", line 156, in _connect
-    stream = stream.start_tls(**kwargs)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpcore/_backends/sync.py", line 154, in start_tls
-    with map_exceptions(exc_map):
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/contextlib.py", line 158, in __exit__
-    self.gen.throw(typ, value, traceback)
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
-    raise to_exc(exc) from exc
-httpcore.ConnectError: [Errno 104] Connection reset by peer
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/llms/custom_httpx/llm_http_handler.py", line 235, in _make_common_sync_call
-    response = sync_httpx_client.post(
-               ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/llms/custom_httpx/http_handler.py", line 1049, in post
-    raise e
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/llms/custom_httpx/http_handler.py", line 1028, in post
-    response = self.client.send(req, stream=stream)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_client.py", line 914, in send
-    response = self._send_handling_auth(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_client.py", line 942, in _send_handling_auth
-    response = self._send_handling_redirects(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
-    response = self._send_single_request(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_client.py", line 1014, in _send_single_request
-    response = transport.handle_request(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_transports/default.py", line 249, in handle_request
-    with map_httpcore_exceptions():
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/contextlib.py", line 158, in __exit__
-    self.gen.throw(typ, value, traceback)
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
-    raise mapped_exc(message) from exc
-httpx.ConnectError: [Errno 104] Connection reset by peer
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/main.py", line 1888, in completion
-    raise e
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/main.py", line 1861, in completion
-    response = base_llm_http_handler.completion(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/llms/custom_httpx/llm_http_handler.py", line 559, in completion
-    response = self._make_common_sync_call(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/llms/custom_httpx/llm_http_handler.py", line 262, in _make_common_sync_call
-    raise self._handle_error(e=e, provider_config=provider_config)
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/llms/custom_httpx/llm_http_handler.py", line 4720, in _handle_error
-    raise provider_config.get_error_class(
-litellm.llms.openai.common_utils.OpenAIError: [Errno 104] Connection reset by peer
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/gepa/proposer/reflective_mutation/reflective_mutation.py", line 297, in propose
-    new_texts = self.propose_new_texts(curr_prog, reflective_dataset, predictor_names_to_update)
-                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/gepa/proposer/reflective_mutation/reflective_mutation.py", line 128, in propose_new_texts
-    new_texts[name] = InstructionProposalSignature.run(
-                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/gepa/proposer/reflective_mutation/base.py", line 48, in run
-    lm_res = lm(full_prompt)
-             ^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/gepa/optimize_anything.py", line 859, in _lm
-    completion = litellm.completion(model=model_name, messages=messages)
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/utils.py", line 1771, in wrapper
-    raise e
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/utils.py", line 1592, in wrapper
-    result = original_function(*args, **kwargs)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/main.py", line 4411, in completion
-    raise exception_type(
-          ^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/litellm_core_utils/exception_mapping_utils.py", line 2456, in exception_type
-    raise e
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/litellm_core_utils/exception_mapping_utils.py", line 588, in exception_type
-    raise InternalServerError(
-litellm.exceptions.InternalServerError: litellm.InternalServerError: InternalServerError: DeepseekException - [Errno 104] Connection reset by peer
-=== Helios Eval Pipeline ===
-INPUT_CSV=/scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval/eval_input.csv
-EXPERIMENT_NAME=candidate
-EXPERIMENT_OUTPUT_DIR=/scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate
-TASK_TYPE=loop
-GPU_ID=0
-NUM_WORKERS=8
-SCORE_TYPE=rating
-VIDEO_PATH_COLUMN=video_path
-PARALLEL_METRICS=0
-RUN_NATURALNESS=0
-DRY_RUN=0
---- Running: Aesthetic ---
-/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/clip/clip.py:6: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
-  from pkg_resources import packaging
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/aesthetic_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Motion Amplitude ---
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/motion_amplitude_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Motion Smoothness ---
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/motion_smoothness_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Semantic ---
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/semantic_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Drifting Aesthetic ---
-/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/clip/clip.py:6: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
-  from pkg_resources import packaging
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/drifting_aesthetic_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Drifting Motion Smoothness ---
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/drifting_motion_smoothness_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Drifting Semantic ---
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/drifting_semantic_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Stage 1 merge (9_merge_all_scores.py) ---
-
-Calculating Weighted Total Rating (Long):
-  - aesthetic: 9 * 0.03 = 0.2700
-  - motion_amplitude: 5 * 0.03 = 0.1500
-  - motion_smoothness: 9 * 0.03 = 0.2700
-  - semantic: 1 * 0.255 = 0.2550
-  ⚠ Warning: Metric 'naturalness' missing for weighting!
-  - drifting_aesthetic: 5 * 0.099 = 0.4950
-  - drifting_motion_smoothness: 9 * 0.099 = 0.8910
-  - drifting_semantic: 10 * 0.099 = 0.9900
-  ⚠ Warning: Metric 'drifting_naturalness' missing for weighting!
-
->>> FINAL WEIGHTED RATING: 3.321
-
---- Stage 2 failure explanation + combined report (11_build_combined_report.py) ---
-Loading weights:   0%|          | 0/729 [00:00<?, ?it/s]Loading weights:   0%|          | 1/729 [00:00<04:26,  2.73it/s]Loading weights:   2%|▏         | 16/729 [00:00<00:16, 43.61it/s]Loading weights:   4%|▍         | 28/729 [00:00<00:11, 62.44it/s]Loading weights:   5%|▌         | 40/729 [00:00<00:09, 70.61it/s]Loading weights:   8%|▊         | 60/729 [00:00<00:06, 104.31it/s]Loading weights:  10%|█         | 76/729 [00:01<00:06, 98.35it/s] Loading weights:  12%|█▏        | 88/729 [00:01<00:06, 101.56it/s]Loading weights:  14%|█▎        | 100/729 [00:01<00:06, 98.21it/s]Loading weights:  16%|█▌        | 114/729 [00:01<00:06, 101.09it/s]Loading weights:  19%|█▊        | 136/729 [00:01<00:05, 111.75it/s]Loading weights:  20%|██        | 148/729 [00:01<00:05, 111.72it/s]Loading weights:  22%|██▏       | 160/729 [00:01<00:05, 108.49it/s]Loading weights:  24%|██▎       | 172/729 [00:01<00:05, 110.77it/s]Loading weights:  26%|██▌       | 186/729 [00:01<00:04, 117.32it/s]Loading weights:  27%|██▋       | 198/729 [00:02<00:04, 114.10it/s]Loading weights:  29%|██▉       | 210/729 [00:02<00:04, 114.98it/s]Loading weights:  30%|███       | 222/729 [00:02<00:04, 113.03it/s]Loading weights:  33%|███▎      | 242/729 [00:02<00:03, 135.11it/s]Loading weights:  35%|███▌      | 256/729 [00:02<00:04, 102.66it/s]Loading weights:  38%|███▊      | 280/729 [00:02<00:03, 113.94it/s]Loading weights:  40%|████      | 293/729 [00:02<00:03, 111.30it/s]Loading weights:  42%|████▏     | 305/729 [00:03<00:03, 111.82it/s]Loading weights:  43%|████▎     | 317/729 [00:03<00:03, 104.85it/s]Loading weights:  48%|████▊     | 347/729 [00:03<00:02, 151.97it/s]Loading weights:  64%|██████▍   | 470/729 [00:03<00:00, 429.38it/s]Loading weights:  82%|████████▏ | 595/729 [00:03<00:00, 647.31it/s]Loading weights:  98%|█████████▊| 715/729 [00:03<00:00, 793.85it/s]Loading weights: 100%|██████████| 729/729 [00:03<00:00, 202.38it/s]
-The module name  (originally ) is not a valid Python identifier. Please rename the original module to avoid import issues.
-Wrote combined report: /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/combined_video_report.json
-
-Iteration 1: Reflective mutation did not propose a new candidate
-Iteration 2: Selected program 0 score: 1.477556822408989
-
-[1;31mGive Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new[0m
-LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()'.
-
-
-[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
-
-Iteration 2: Exception during reflection/proposal: litellm.InternalServerError: InternalServerError: DeepseekException - [Errno 104] Connection reset by peer
-Traceback (most recent call last):
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
-    yield
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_transports/default.py", line 250, in handle_request
-    resp = self._pool.handle_request(req)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpcore/_sync/connection_pool.py", line 256, in handle_request
-    raise exc from None
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpcore/_sync/connection_pool.py", line 236, in handle_request
-    response = connection.handle_request(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpcore/_sync/connection.py", line 101, in handle_request
-    raise exc
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpcore/_sync/connection.py", line 78, in handle_request
-    stream = self._connect(request)
-             ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpcore/_sync/connection.py", line 156, in _connect
-    stream = stream.start_tls(**kwargs)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpcore/_backends/sync.py", line 154, in start_tls
-    with map_exceptions(exc_map):
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/contextlib.py", line 158, in __exit__
-    self.gen.throw(typ, value, traceback)
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
-    raise to_exc(exc) from exc
-httpcore.ConnectError: [Errno 104] Connection reset by peer
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/llms/custom_httpx/llm_http_handler.py", line 235, in _make_common_sync_call
-    response = sync_httpx_client.post(
-               ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/llms/custom_httpx/http_handler.py", line 1049, in post
-    raise e
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/llms/custom_httpx/http_handler.py", line 1028, in post
-    response = self.client.send(req, stream=stream)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_client.py", line 914, in send
-    response = self._send_handling_auth(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_client.py", line 942, in _send_handling_auth
-    response = self._send_handling_redirects(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
-    response = self._send_single_request(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_client.py", line 1014, in _send_single_request
-    response = transport.handle_request(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_transports/default.py", line 249, in handle_request
-    with map_httpcore_exceptions():
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/contextlib.py", line 158, in __exit__
-    self.gen.throw(typ, value, traceback)
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
-    raise mapped_exc(message) from exc
-httpx.ConnectError: [Errno 104] Connection reset by peer
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/main.py", line 1888, in completion
-    raise e
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/main.py", line 1861, in completion
-    response = base_llm_http_handler.completion(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/llms/custom_httpx/llm_http_handler.py", line 559, in completion
-    response = self._make_common_sync_call(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/llms/custom_httpx/llm_http_handler.py", line 262, in _make_common_sync_call
-    raise self._handle_error(e=e, provider_config=provider_config)
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/llms/custom_httpx/llm_http_handler.py", line 4720, in _handle_error
-    raise provider_config.get_error_class(
-litellm.llms.openai.common_utils.OpenAIError: [Errno 104] Connection reset by peer
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/gepa/proposer/reflective_mutation/reflective_mutation.py", line 297, in propose
-    new_texts = self.propose_new_texts(curr_prog, reflective_dataset, predictor_names_to_update)
-                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/gepa/proposer/reflective_mutation/reflective_mutation.py", line 128, in propose_new_texts
-    new_texts[name] = InstructionProposalSignature.run(
-                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/gepa/proposer/reflective_mutation/base.py", line 48, in run
-    lm_res = lm(full_prompt)
-             ^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/gepa/optimize_anything.py", line 859, in _lm
-    completion = litellm.completion(model=model_name, messages=messages)
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/utils.py", line 1771, in wrapper
-    raise e
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/utils.py", line 1592, in wrapper
-    result = original_function(*args, **kwargs)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/main.py", line 4411, in completion
-    raise exception_type(
-          ^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/litellm_core_utils/exception_mapping_utils.py", line 2456, in exception_type
-    raise e
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/litellm_core_utils/exception_mapping_utils.py", line 588, in exception_type
-    raise InternalServerError(
-litellm.exceptions.InternalServerError: litellm.InternalServerError: InternalServerError: DeepseekException - [Errno 104] Connection reset by peer
-
-Iteration 2: Reflective mutation did not propose a new candidate=== Helios Eval Pipeline ===
-INPUT_CSV=/scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval/eval_input.csv
-EXPERIMENT_NAME=candidate
-EXPERIMENT_OUTPUT_DIR=/scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate
-TASK_TYPE=loop
-GPU_ID=0
-NUM_WORKERS=8
-SCORE_TYPE=rating
-VIDEO_PATH_COLUMN=video_path
-PARALLEL_METRICS=0
-RUN_NATURALNESS=0
-DRY_RUN=0
---- Running: Aesthetic ---
-/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/clip/clip.py:6: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
-  from pkg_resources import packaging
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/aesthetic_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Motion Amplitude ---
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/motion_amplitude_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Motion Smoothness ---
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/motion_smoothness_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Semantic ---
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/semantic_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Drifting Aesthetic ---
-/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/clip/clip.py:6: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
-  from pkg_resources import packaging
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/drifting_aesthetic_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Drifting Motion Smoothness ---
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/drifting_motion_smoothness_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Running: Drifting Semantic ---
-Using device: cuda
-Found existing results at /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/drifting_semantic_results.json, loading...
-Loaded 2 existing results
-
-Found 2 videos from dataset
-Already processed: 2 videos
-Need to process: 0 videos
-No videos to process. Skipping evaluation.
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
-failed to load libva.so.2, try libva.so.1
-failed to load libva.so.1
---- Stage 1 merge (9_merge_all_scores.py) ---
-
-Calculating Weighted Total Rating (Long):
-  - aesthetic: 9 * 0.03 = 0.2700
-  - motion_amplitude: 5 * 0.03 = 0.1500
-  - motion_smoothness: 9 * 0.03 = 0.2700
-  - semantic: 1 * 0.255 = 0.2550
-  ⚠ Warning: Metric 'naturalness' missing for weighting!
-  - drifting_aesthetic: 5 * 0.099 = 0.4950
-  - drifting_motion_smoothness: 9 * 0.099 = 0.8910
-  - drifting_semantic: 10 * 0.099 = 0.9900
-  ⚠ Warning: Metric 'drifting_naturalness' missing for weighting!
-
->>> FINAL WEIGHTED RATING: 3.321
-
---- Stage 2 failure explanation + combined report (11_build_combined_report.py) ---
-Loading weights:   0%|          | 0/729 [00:00<?, ?it/s]Loading weights:   0%|          | 1/729 [00:00<03:14,  3.74it/s]Loading weights:   0%|          | 2/729 [00:00<02:12,  5.48it/s]Loading weights:   4%|▍         | 28/729 [00:00<00:08, 79.16it/s]Loading weights:   5%|▌         | 40/729 [00:00<00:08, 80.50it/s]Loading weights:   9%|▉         | 64/729 [00:00<00:06, 107.87it/s]Loading weights:  11%|█         | 77/729 [00:00<00:05, 111.83it/s]Loading weights:  12%|█▏        | 90/729 [00:01<00:05, 115.51it/s]Loading weights:  14%|█▍        | 103/729 [00:01<00:05, 114.03it/s]Loading weights:  16%|█▌        | 115/729 [00:01<00:05, 112.90it/s]Loading weights:  17%|█▋        | 127/729 [00:01<00:05, 112.06it/s]Loading weights:  20%|██        | 148/729 [00:01<00:05, 111.06it/s]Loading weights:  22%|██▏       | 161/729 [00:01<00:05, 101.60it/s]Loading weights:  25%|██▌       | 184/729 [00:01<00:04, 122.29it/s]Loading weights:  27%|██▋       | 197/729 [00:01<00:04, 116.11it/s]Loading weights:  29%|██▊       | 209/729 [00:02<00:04, 115.26it/s]Loading weights:  30%|███       | 222/729 [00:02<00:04, 117.92it/s]Loading weights:  33%|███▎      | 242/729 [00:02<00:03, 131.54it/s]Loading weights:  35%|███▌      | 256/729 [00:02<00:04, 115.61it/s]Loading weights:  37%|███▋      | 268/729 [00:02<00:04, 113.36it/s]Loading weights:  38%|███▊      | 280/729 [00:02<00:04, 112.25it/s]Loading weights:  40%|████      | 293/729 [00:02<00:03, 111.33it/s]Loading weights:  43%|████▎     | 314/729 [00:02<00:03, 133.29it/s]Loading weights:  45%|████▍     | 328/729 [00:03<00:03, 107.82it/s]Loading weights:  61%|██████    | 443/729 [00:03<00:00, 350.32it/s]Loading weights:  77%|███████▋  | 563/729 [00:03<00:00, 561.28it/s]Loading weights:  93%|█████████▎| 679/729 [00:03<00:00, 714.63it/s]Loading weights: 100%|██████████| 729/729 [00:03<00:00, 210.08it/s]
-The module name  (originally ) is not a valid Python identifier. Please rename the original module to avoid import issues.
-Wrote combined report: /scratch/users/ntu/dsee009/Helios/gepa_prompt_opt/runs/test_samples_loop_01/cand_db8e734599254775/eval_out/candidate/combined_video_report.json
-
-Iteration 3: Selected program 0 score: 1.477556822408989
-
-[1;31mGive Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new[0m
-LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()'.
-
-
-[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
-
-Iteration 3: Exception during reflection/proposal: litellm.InternalServerError: InternalServerError: DeepseekException - [Errno 104] Connection reset by peer
-Traceback (most recent call last):
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
-    yield
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_transports/default.py", line 250, in handle_request
-    resp = self._pool.handle_request(req)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpcore/_sync/connection_pool.py", line 256, in handle_request
-    raise exc from None
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpcore/_sync/connection_pool.py", line 236, in handle_request
-    response = connection.handle_request(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpcore/_sync/connection.py", line 101, in handle_request
-    raise exc
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpcore/_sync/connection.py", line 78, in handle_request
-    stream = self._connect(request)
-             ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpcore/_sync/connection.py", line 156, in _connect
-    stream = stream.start_tls(**kwargs)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpcore/_backends/sync.py", line 154, in start_tls
-    with map_exceptions(exc_map):
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/contextlib.py", line 158, in __exit__
-    self.gen.throw(typ, value, traceback)
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
-    raise to_exc(exc) from exc
-httpcore.ConnectError: [Errno 104] Connection reset by peer
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/llms/custom_httpx/llm_http_handler.py", line 235, in _make_common_sync_call
-    response = sync_httpx_client.post(
-               ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/llms/custom_httpx/http_handler.py", line 1049, in post
-    raise e
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/llms/custom_httpx/http_handler.py", line 1028, in post
-    response = self.client.send(req, stream=stream)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_client.py", line 914, in send
-    response = self._send_handling_auth(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_client.py", line 942, in _send_handling_auth
-    response = self._send_handling_redirects(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
-    response = self._send_single_request(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_client.py", line 1014, in _send_single_request
-    response = transport.handle_request(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_transports/default.py", line 249, in handle_request
-    with map_httpcore_exceptions():
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/contextlib.py", line 158, in __exit__
-    self.gen.throw(typ, value, traceback)
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
-    raise mapped_exc(message) from exc
-httpx.ConnectError: [Errno 104] Connection reset by peer
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/main.py", line 1888, in completion
-    raise e
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/main.py", line 1861, in completion
-    response = base_llm_http_handler.completion(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/llms/custom_httpx/llm_http_handler.py", line 559, in completion
-    response = self._make_common_sync_call(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/llms/custom_httpx/llm_http_handler.py", line 262, in _make_common_sync_call
-    raise self._handle_error(e=e, provider_config=provider_config)
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/llms/custom_httpx/llm_http_handler.py", line 4720, in _handle_error
-    raise provider_config.get_error_class(
-litellm.llms.openai.common_utils.OpenAIError: [Errno 104] Connection reset by peer
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/gepa/proposer/reflective_mutation/reflective_mutation.py", line 297, in propose
-    new_texts = self.propose_new_texts(curr_prog, reflective_dataset, predictor_names_to_update)
-                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/gepa/proposer/reflective_mutation/reflective_mutation.py", line 128, in propose_new_texts
-    new_texts[name] = InstructionProposalSignature.run(
-                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/gepa/proposer/reflective_mutation/base.py", line 48, in run
-    lm_res = lm(full_prompt)
-             ^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/gepa/optimize_anything.py", line 859, in _lm
-    completion = litellm.completion(model=model_name, messages=messages)
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/utils.py", line 1771, in wrapper
-    raise e
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/utils.py", line 1592, in wrapper
-    result = original_function(*args, **kwargs)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/main.py", line 4411, in completion
-    raise exception_type(
-          ^^^^^^^^^^^^^^^
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/litellm_core_utils/exception_mapping_utils.py", line 2456, in exception_type
-    raise e
-  File "/home/users/ntu/dsee009/conda_envs/helios/lib/python3.11/site-packages/litellm/litellm_core_utils/exception_mapping_utils.py", line 588, in exception_type
-    raise InternalServerError(
-litellm.exceptions.InternalServerError: litellm.InternalServerError: InternalServerError: DeepseekException - [Errno 104] Connection reset by peer
-
-Iteration 3: Reflective mutation did not propose a new candidate

@@ -3,8 +3,11 @@ from __future__ import annotations
 import os
 import shlex
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+import cv2
 
 
 @dataclass(frozen=True)
@@ -70,6 +73,7 @@ def build_infer_command(
     prompt: str,
     output_folder: Path,
     num_frames: int | None = None,
+    fps: int | None = None,
 ) -> tuple[dict[str, str], list[str]]:
     script_text = config.inference_script_path.read_text(encoding="utf-8")
     base_env, base_argv = _extract_command_tokens(script_text)
@@ -79,11 +83,15 @@ def build_infer_command(
     env["CUDA_VISIBLE_DEVICES"] = config.cuda_visible_devices
 
     argv = list(base_argv)
+    if argv and argv[0] in {"python", "python3"}:
+        argv[0] = sys.executable
     argv = _override_arg(argv, "--video_path", str(input_video_path))
     argv = _override_arg(argv, "--prompt", prompt)
     argv = _override_arg(argv, "--output_folder", str(output_folder))
     if num_frames is not None:
         argv = _override_arg(argv, "--num_frames", str(int(num_frames)))
+    if fps is not None:
+        argv = _override_arg(argv, "--fps", str(int(fps)))
     return env, argv
 
 
@@ -95,6 +103,7 @@ def run_v2v_inference(
     output_folder: Path,
     output_mp4_path: Path,
     num_frames: int | None = None,
+    fps: int | None = None,
     timeout_seconds: int | None = None,
 ) -> Path:
     """
@@ -105,8 +114,7 @@ def run_v2v_inference(
     """
     output_folder.mkdir(parents=True, exist_ok=True)
     output_mp4_path.parent.mkdir(parents=True, exist_ok=True)
-    if output_mp4_path.exists():
-        return output_mp4_path
+    output_mp4_path.unlink(missing_ok=True)
 
     env, argv = build_infer_command(
         config,
@@ -114,6 +122,7 @@ def run_v2v_inference(
         prompt=prompt,
         output_folder=output_folder,
         num_frames=num_frames,
+        fps=fps,
     )
 
     before = {p.resolve() for p in output_folder.glob("*.mp4")}
@@ -124,4 +133,42 @@ def run_v2v_inference(
         raise RuntimeError(f"No new mp4 produced in output_folder: {output_folder}")
     newest = new_files[-1]
     newest.replace(output_mp4_path)
+    if num_frames is not None:
+        _normalize_output_video(output_mp4_path, target_num_frames=int(num_frames), target_fps=fps)
     return output_mp4_path
+
+
+def _normalize_output_video(path: Path, *, target_num_frames: int, target_fps: int | None) -> None:
+    cap = cv2.VideoCapture(str(path))
+    if not cap.isOpened():
+        cap.release()
+        raise RuntimeError(f"Could not open generated video for normalization: {path}")
+
+    src_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    src_fps = float(cap.get(cv2.CAP_PROP_FPS) or 0) or 24.0
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    desired_fps = float(target_fps or src_fps)
+
+    if src_frames == target_num_frames and abs(src_fps - desired_fps) < 0.01:
+        cap.release()
+        return
+
+    tmp_path = path.with_name(path.stem + "_normalized.mp4")
+    writer = cv2.VideoWriter(str(tmp_path), cv2.VideoWriter_fourcc(*"mp4v"), desired_fps, (width, height))
+    written = 0
+    while written < target_num_frames:
+        ok, frame = cap.read()
+        if not ok:
+            break
+        writer.write(frame)
+        written += 1
+
+    cap.release()
+    writer.release()
+
+    if written == 0:
+        tmp_path.unlink(missing_ok=True)
+        raise RuntimeError(f"Video normalization wrote zero frames: {path}")
+
+    tmp_path.replace(path)

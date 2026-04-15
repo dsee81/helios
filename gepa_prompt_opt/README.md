@@ -37,7 +37,7 @@ It optimizes a **prompt template** (not per-video prompts) for the **`loop` / re
    - You must have the weights and runtime deps needed by `infer_helios.py`.
 
 4. **Evaluation pipeline must work**
-   - The optimizer calls `eval/run_metrics.sh` as a black box.
+   - The optimizer calls `eval/run_metrics.sh` with environment-variable overrides.
    - You must have eval checkpoints present under `eval/checkpoints/...` per `eval/README.md`.
    - If you want **VLM judgments**, ensure:
      - `transformers` is installed on the target system
@@ -75,6 +75,8 @@ python -m gepa_prompt_opt.cli optimize-loop \
   --num_iterations 10 \
   --candidates_per_iteration 4 \
   --num_frames 240 \
+  --eval_split train \
+  --disable_vlm \
   --reflection_lm deepseek/deepseek-chat
 ```
 
@@ -89,7 +91,7 @@ Artifacts are written under `--work_dir` as:
 
 - `gepa_prompt_opt/dataset_manifest.py`: loads the dataset manifest, resolves video paths, and provides per-video variables (always includes `initial_prompt` and `duration_seconds`).
 - `gepa_prompt_opt/template.py`: validates fixed template structure and renders a per-video prompt via `str.format(**variables)`.
-- `gepa_prompt_opt/helios_infer.py`: reads `scripts/inference/helios-distilled_v2v.sh`, extracts the `python infer_helios.py ...` invocation, and runs it with overridden `--video_path/--prompt/--output_folder`.
+- `gepa_prompt_opt/helios_infer.py`: reads `scripts/inference/helios-distilled_v2v.sh`, extracts the `python infer_helios.py ...` invocation, and runs it with overridden `--video_path/--prompt/--output_folder` using the current Python interpreter.
 - `gepa_prompt_opt/eval_pipeline.py`: runs `eval/run_metrics.sh` with environment variables and returns the path to `combined_video_report.json`.
 - `gepa_prompt_opt/aggregate.py`: computes per-video score + failure penalty from the combined report; aggregates to objective `J` and GEPA-friendly `side_info`.
 - `gepa_prompt_opt/gepa_driver.py`: orchestrates the full candidate evaluation and plugs it into GEPA.

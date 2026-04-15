@@ -510,6 +510,53 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
 
         return noise
 
+    def _date_grad_select_frames(self, tensor: torch.Tensor | None, max_frames: int | None) -> torch.Tensor | None:
+        if tensor is None or max_frames is None or tensor.shape[2] <= max_frames:
+            return tensor
+
+        frame_idx = torch.linspace(0, tensor.shape[2] - 1, max_frames, device=tensor.device)
+        frame_idx = frame_idx.round().to(torch.long)
+        return tensor.index_select(2, frame_idx)
+
+    def _date_grad_downsample_spatial(
+        self, tensor: torch.Tensor | None, spatial_downsample: int
+    ) -> torch.Tensor | None:
+        if tensor is None or spatial_downsample <= 1:
+            return tensor
+
+        batch_size, channels, num_frames, height, width = tensor.shape
+        target_h = max(1, height // spatial_downsample)
+        target_w = max(1, width // spatial_downsample)
+        if target_h == height and target_w == width:
+            return tensor
+
+        flat = tensor.permute(0, 2, 1, 3, 4).reshape(batch_size * num_frames, channels, height, width)
+        flat = F.interpolate(flat.float(), size=(target_h, target_w), mode="bilinear", align_corners=False)
+        return flat.reshape(batch_size, num_frames, channels, target_h, target_w).permute(0, 2, 1, 3, 4)
+
+    def _prepare_date_grad_inputs(
+        self,
+        *,
+        latents: torch.Tensor,
+        latents_history_short: torch.Tensor | None,
+        latents_history_mid: torch.Tensor | None,
+        latents_history_long: torch.Tensor | None,
+        spatial_downsample: int,
+        max_frames: int | None,
+    ) -> tuple[torch.Tensor, torch.Tensor | None, torch.Tensor | None, torch.Tensor | None]:
+        grad_latents = self._date_grad_select_frames(latents, max_frames)
+        grad_latents = self._date_grad_downsample_spatial(grad_latents, spatial_downsample)
+
+        grad_history_short = self._date_grad_select_frames(latents_history_short, max_frames)
+        grad_history_mid = self._date_grad_select_frames(latents_history_mid, max_frames)
+        grad_history_long = self._date_grad_select_frames(latents_history_long, max_frames)
+
+        grad_history_short = self._date_grad_downsample_spatial(grad_history_short, spatial_downsample)
+        grad_history_mid = self._date_grad_downsample_spatial(grad_history_mid, spatial_downsample)
+        grad_history_long = self._date_grad_downsample_spatial(grad_history_long, spatial_downsample)
+
+        return grad_latents, grad_history_short, grad_history_mid, grad_history_long
+
     def stage1_sample(
         self,
         latents: torch.Tensor = None,
@@ -539,6 +586,9 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
         use_date_grad: bool = False,
         date_lr: float = 0.02,
         date_update_freq: int = 2,
+        date_grad_spatial_downsample: int = 2,
+        date_grad_max_frames: int | None = 17,
+        date_grad_max_stage: int | None = 0,
         # ------------ Callback ------------
         callback_on_step_end: Callable[[int, int], None] | PipelineCallback | MultiPipelineCallbacks | None = None,
         callback_on_step_end_tensor_inputs: list[str] = ["latents"],
@@ -572,32 +622,46 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
 
             latent_model_input = latents.to(transformer_dtype)
 
-            do_date_grad_update = use_date_grad and (i % date_update_freq == 0)
+            do_date_grad_update = (
+                use_date_grad
+                and (i % date_update_freq == 0)
+                and (date_grad_max_stage is None or date_grad_max_stage >= 0)
+            )
             if do_date_grad_update:
                 with torch.enable_grad():
                     prompt_embeds_for_grad = prompt_embeds_current.detach().clone().requires_grad_(True)
+                    grad_latents, grad_history_short, grad_history_mid, grad_history_long = self._prepare_date_grad_inputs(
+                        latents=latents,
+                        latents_history_short=latents_history_short,
+                        latents_history_mid=latents_history_mid,
+                        latents_history_long=latents_history_long,
+                        spatial_downsample=date_grad_spatial_downsample,
+                        max_frames=date_grad_max_frames,
+                    )
+                    grad_timestep = t.expand(grad_latents.shape[0])
                     # DATE-grad requires autograd through the transformer w.r.t. prompt embeddings.
-                    # This is memory-heavy; checkpoint the forward to trade compute for lower peak VRAM.
+                    # Run the gradient update on a smaller surrogate latent/history tensor, then do the
+                    # actual denoising pass without grad on the full-resolution tensors.
                     def _date_grad_forward(_latent_model_input, _prompt_embeds_for_grad):
                         with self.transformer.cache_context("cond"):
                             return self.transformer(
                                 hidden_states=_latent_model_input,
-                                timestep=timestep,
+                                timestep=grad_timestep,
                                 encoder_hidden_states=_prompt_embeds_for_grad,
                                 indices_hidden_states=indices_hidden_states,
                                 indices_latents_history_short=indices_latents_history_short,
                                 indices_latents_history_mid=indices_latents_history_mid,
                                 indices_latents_history_long=indices_latents_history_long,
-                                latents_history_short=latents_history_short.to(transformer_dtype),
-                                latents_history_mid=latents_history_mid.to(transformer_dtype),
-                                latents_history_long=latents_history_long.to(transformer_dtype),
+                                latents_history_short=grad_history_short.to(transformer_dtype),
+                                latents_history_mid=grad_history_mid.to(transformer_dtype),
+                                latents_history_long=grad_history_long.to(transformer_dtype),
                                 attention_kwargs=attention_kwargs,
                                 return_dict=False,
                             )[0]
 
                     noise_pred = torch.utils.checkpoint.checkpoint(
                         _date_grad_forward,
-                        latent_model_input,
+                        grad_latents.to(transformer_dtype),
                         prompt_embeds_for_grad,
                         use_reentrant=False,
                     )
@@ -605,30 +669,28 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
                     prompt_embeds_current = update_text_embeddings_grad(
                         prompt_embeds_for_grad,
                         noise_pred,
-                        latents,
+                        grad_latents,
                         t,
                         scheduler=self.scheduler,
                         transformer=self.transformer,
                         lr=date_lr,
                     ).to(dtype=transformer_dtype)
 
-                noise_pred = noise_pred.detach()
-            else:
-                with self.transformer.cache_context("cond"):
-                    noise_pred = self.transformer(
-                        hidden_states=latent_model_input,
-                        timestep=timestep,
-                        encoder_hidden_states=prompt_embeds_current,
-                        indices_hidden_states=indices_hidden_states,
-                        indices_latents_history_short=indices_latents_history_short,
-                        indices_latents_history_mid=indices_latents_history_mid,
-                        indices_latents_history_long=indices_latents_history_long,
-                        latents_history_short=latents_history_short.to(transformer_dtype),
-                        latents_history_mid=latents_history_mid.to(transformer_dtype),
-                        latents_history_long=latents_history_long.to(transformer_dtype),
-                        attention_kwargs=attention_kwargs,
-                        return_dict=False,
-                    )[0]
+            with self.transformer.cache_context("cond"):
+                noise_pred = self.transformer(
+                    hidden_states=latent_model_input,
+                    timestep=timestep,
+                    encoder_hidden_states=prompt_embeds_current,
+                    indices_hidden_states=indices_hidden_states,
+                    indices_latents_history_short=indices_latents_history_short,
+                    indices_latents_history_mid=indices_latents_history_mid,
+                    indices_latents_history_long=indices_latents_history_long,
+                    latents_history_short=latents_history_short.to(transformer_dtype),
+                    latents_history_mid=latents_history_mid.to(transformer_dtype),
+                    latents_history_long=latents_history_long.to(transformer_dtype),
+                    attention_kwargs=attention_kwargs,
+                    return_dict=False,
+                )[0]
 
             if self.do_classifier_free_guidance:
                 with self.transformer.cache_context("uncond"):
@@ -730,6 +792,9 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
         use_date_grad: bool = False,
         date_lr: float = 0.02,
         date_update_freq: int = 2,
+        date_grad_spatial_downsample: int = 2,
+        date_grad_max_frames: int | None = 17,
+        date_grad_max_stage: int | None = 0,
         # -------------- DMD --------------
         is_amplify_first_chunk: bool = False,
         # ------------ Callback ------------
@@ -825,17 +890,29 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
             for idx, t in enumerate(timesteps):
                 timestep = t.expand(latents.shape[0]).to(torch.int64)
 
-                do_date_grad_update = use_date_grad and (idx % date_update_freq == 0)
+                do_date_grad_update = (
+                    use_date_grad
+                    and (idx % date_update_freq == 0)
+                    and (date_grad_max_stage is None or i_s <= date_grad_max_stage)
+                )
                 if do_date_grad_update:
                     with torch.enable_grad():
                         prompt_embeds_for_grad = prompt_embeds_current.detach().clone().requires_grad_(True)
-                        latent_model_input = latents.to(transformer_dtype)
+                        grad_latents, grad_history_short, grad_history_mid, grad_history_long = self._prepare_date_grad_inputs(
+                            latents=latents,
+                            latents_history_short=latents_history_short,
+                            latents_history_mid=latents_history_mid,
+                            latents_history_long=latents_history_long,
+                            spatial_downsample=date_grad_spatial_downsample,
+                            max_frames=date_grad_max_frames,
+                        )
+                        grad_timestep = t.expand(grad_latents.shape[0]).to(torch.int64)
 
                         def _date_grad_forward(_latent_model_input, _prompt_embeds_for_grad):
                             with self.transformer.cache_context("cond"):
                                 return self.transformer(
                                     hidden_states=_latent_model_input,
-                                    timestep=timestep,
+                                    timestep=grad_timestep,
                                     encoder_hidden_states=_prompt_embeds_for_grad,
                                     attention_kwargs=attention_kwargs,
                                     return_dict=False,
@@ -843,14 +920,14 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
                                     indices_latents_history_short=indices_latents_history_short,
                                     indices_latents_history_mid=indices_latents_history_mid,
                                     indices_latents_history_long=indices_latents_history_long,
-                                    latents_history_short=latents_history_short.to(transformer_dtype),
-                                    latents_history_mid=latents_history_mid.to(transformer_dtype),
-                                    latents_history_long=latents_history_long.to(transformer_dtype),
+                                    latents_history_short=grad_history_short.to(transformer_dtype),
+                                    latents_history_mid=grad_history_mid.to(transformer_dtype),
+                                    latents_history_long=grad_history_long.to(transformer_dtype),
                                 )[0]
 
                         noise_pred = torch.utils.checkpoint.checkpoint(
                             _date_grad_forward,
-                            latent_model_input,
+                            grad_latents.to(transformer_dtype),
                             prompt_embeds_for_grad,
                             use_reentrant=False,
                         )
@@ -858,30 +935,28 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
                         prompt_embeds_current = update_text_embeddings_grad(
                             prompt_embeds_for_grad,
                             noise_pred,
-                            latents,
+                            grad_latents,
                             t,
                             scheduler=self.scheduler,
                             transformer=self.transformer,
                             lr=date_lr,
                         ).to(dtype=transformer_dtype)
 
-                    noise_pred = noise_pred.detach()
-                else:
-                    with self.transformer.cache_context("cond"):
-                        noise_pred = self.transformer(
-                            hidden_states=latents.to(transformer_dtype),
-                            timestep=timestep,
-                            encoder_hidden_states=prompt_embeds_current,
-                            attention_kwargs=attention_kwargs,
-                            return_dict=False,
-                            indices_hidden_states=indices_hidden_states,
-                            indices_latents_history_short=indices_latents_history_short,
-                            indices_latents_history_mid=indices_latents_history_mid,
-                            indices_latents_history_long=indices_latents_history_long,
-                            latents_history_short=latents_history_short.to(transformer_dtype),
-                            latents_history_mid=latents_history_mid.to(transformer_dtype),
-                            latents_history_long=latents_history_long.to(transformer_dtype),
-                        )[0]
+                with self.transformer.cache_context("cond"):
+                    noise_pred = self.transformer(
+                        hidden_states=latents.to(transformer_dtype),
+                        timestep=timestep,
+                        encoder_hidden_states=prompt_embeds_current,
+                        attention_kwargs=attention_kwargs,
+                        return_dict=False,
+                        indices_hidden_states=indices_hidden_states,
+                        indices_latents_history_short=indices_latents_history_short,
+                        indices_latents_history_mid=indices_latents_history_mid,
+                        indices_latents_history_long=indices_latents_history_long,
+                        latents_history_short=latents_history_short.to(transformer_dtype),
+                        latents_history_mid=latents_history_mid.to(transformer_dtype),
+                        latents_history_long=latents_history_long.to(transformer_dtype),
+                    )[0]
 
                 if self.do_classifier_free_guidance:
                     with self.transformer.cache_context("uncond"):
@@ -1047,6 +1122,9 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
         use_date_grad: bool = False,
         date_lr: float = 0.02,
         date_update_freq: int = 2,
+        date_grad_spatial_downsample: int = 2,
+        date_grad_max_frames: int | None = 17,
+        date_grad_max_stage: int | None = 0,
     ):
         r"""
         The call function to the pipeline for generation.
@@ -1151,6 +1229,11 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
                 )
             else:
                 logger.info(f"Gradient DATE enabled (inference-only): lr={date_lr}, update_freq={date_update_freq}")
+                logger.info(
+                    "Gradient DATE memory saver: "
+                    f"spatial_downsample={date_grad_spatial_downsample}, "
+                    f"max_frames={date_grad_max_frames}, max_stage={date_grad_max_stage}"
+                )
             self._date_logged = True
 
         self._guidance_scale = guidance_scale
@@ -1467,6 +1550,9 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
                         use_date_grad=use_date_grad,
                         date_lr=date_lr,
                         date_update_freq=date_update_freq,
+                        date_grad_spatial_downsample=date_grad_spatial_downsample,
+                        date_grad_max_frames=date_grad_max_frames,
+                        date_grad_max_stage=date_grad_max_stage,
                         # -------------- DMD --------------
                         is_amplify_first_chunk=is_amplify_first_chunk and is_first_chunk,
                         # ------------ Callback ------------
@@ -1502,6 +1588,9 @@ class HeliosPipeline(DiffusionPipeline, HeliosLoraLoaderMixin):
                         use_date_grad=use_date_grad,
                         date_lr=date_lr,
                         date_update_freq=date_update_freq,
+                        date_grad_spatial_downsample=date_grad_spatial_downsample,
+                        date_grad_max_frames=date_grad_max_frames,
+                        date_grad_max_stage=date_grad_max_stage,
                         # ------------ Callback ------------
                         callback_on_step_end=callback_on_step_end,
                         callback_on_step_end_tensor_inputs=callback_on_step_end_tensor_inputs,

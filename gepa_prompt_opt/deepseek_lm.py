@@ -28,6 +28,7 @@ def _normalize_model_name(model: str) -> str:
 class DeepSeekClientConfig:
     model: str = "deepseek/deepseek-chat"
     base_url: str = "https://api.deepseek.com"
+    api_key: str = "sk-2f79bb184ea94824bb78a02da4973939"
     api_key_env: str = "DEEPSEEK_API_KEY"
     timeout_seconds: int = 60
     max_tokens: int = 512
@@ -46,7 +47,9 @@ def make_deepseek_lm(cfg: DeepSeekClientConfig) -> Callable[[str], str]:
     model_id = _normalize_model_name(cfg.model)
     endpoint = cfg.base_url.rstrip("/") + "/v1/chat/completions"
 
-    api_key = os.environ.get(cfg.api_key_env, "").strip()
+    api_key = (cfg.api_key or "").strip()
+    if not api_key and cfg.api_key_env:
+        api_key = os.environ.get(cfg.api_key_env, "").strip()
     if not api_key:
         raise RuntimeError(
             f"{cfg.api_key_env} is not set. Set it in your job environment to use DeepSeek reflection."
@@ -84,4 +87,3 @@ def make_deepseek_lm(cfg: DeepSeekClientConfig) -> Callable[[str], str]:
         raise RuntimeError(f"DeepSeek call failed after {cfg.retries+1} attempts: {last_err}") from last_err
 
     return lm
-

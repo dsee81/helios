@@ -9,7 +9,8 @@ import torch
 from PIL import Image
 
 # Hardcoded local Qwen2.5-VL model location
-LOCAL_VLM_MODEL_PATH = "/scratch/users/ntu/dsee009/Helios/models/Qwen2.5-VL-7B/"
+LOCAL_VLM_MODEL_PATH = "/tmp/Qwen2.5-VL-7B-Instruct"
+LOOP_CLOSURE_FRAME_STRIDE = 6
 
 # Global cache for loaded model and processor
 _VLM_MODEL = None
@@ -22,7 +23,7 @@ def _load_vlm_model():
         return _VLM_MODEL, _VLM_PROCESSOR
 
     try:
-        from transformers import AutoProcessor, AutoModelForCausalLM
+        from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
     except ImportError:
         raise RuntimeError("transformers is not installed")
 
@@ -31,10 +32,14 @@ def _load_vlm_model():
             f"Local VLM model path not found: {LOCAL_VLM_MODEL_PATH}"
         )
 
-    processor = AutoProcessor.from_pretrained(LOCAL_VLM_MODEL_PATH, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(
+    processor = AutoProcessor.from_pretrained(
         LOCAL_VLM_MODEL_PATH,
-        torch_dtype=torch.float16,
+        trust_remote_code=True,
+        use_fast=False,
+    )
+    model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+        LOCAL_VLM_MODEL_PATH,
+        dtype=torch.float16,
         device_map="auto",
         trust_remote_code=True
     )
@@ -62,12 +67,23 @@ def _prepare_inputs(prompt: str, images: List[Union[str, Image.Image]] = None):
             except Exception:
                 continue
 
-    inputs = processor(
-        text=prompt,
-        images=image_inputs if image_inputs else None,
-        return_tensors="pt"
+    content = []
+    for image in image_inputs:
+        content.append({"type": "image", "image": image})
+    content.append({"type": "text", "text": prompt})
+
+    text = processor.apply_chat_template(
+        [{"role": "user", "content": content}],
+        tokenize=False,
+        add_generation_prompt=True,
     )
-    return model, inputs
+    inputs = processor(
+        text=[text],
+        images=image_inputs if image_inputs else None,
+        return_tensors="pt",
+        padding=True,
+    )
+    return model, processor, inputs
 
 
 def query_vlm(prompt: str, images: List[Union[str, Image.Image]] = None) -> str:
@@ -77,12 +93,17 @@ def query_vlm(prompt: str, images: List[Union[str, Image.Image]] = None) -> str:
     If the local model is not available, this falls back to a deterministic placeholder response.
     """
     try:
-        model, inputs = _prepare_inputs(prompt, images)
+        model, processor, inputs = _prepare_inputs(prompt, images)
         device = next(model.parameters()).device
         inputs = {k: v.to(device) for k, v in inputs.items()}
         with torch.no_grad():
             output = model.generate(**inputs, max_new_tokens=256)
-        decoded = model.generation_config.tokenizer.decode(output[0], skip_special_tokens=True)
+        generated_ids = output[:, inputs["input_ids"].shape[1]:]
+        decoded = processor.batch_decode(
+            generated_ids,
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=False,
+        )[0]
         return decoded
     except Exception as exc:
         fallback = {
@@ -102,6 +123,33 @@ def _sample_frame_indices(total_frames: int, start: int, end: int, num_samples: 
     step = max(1.0, (end - start) / float(num_samples))
     indices = [min(total_frames - 1, int(start + step * i)) for i in range(num_samples)]
     return sorted(set(indices))
+
+
+def _read_frame_indices(video_path: str, indices: List[int]) -> List[Image.Image]:
+    try:
+        import cv2
+    except ImportError:
+        return []
+
+    if not video_path or not os.path.exists(video_path):
+        return []
+
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        cap.release()
+        return []
+
+    images: List[Image.Image] = []
+    for frame_index in sorted(set(i for i in indices if i >= 0)):
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+        success, frame = cap.read()
+        if not success or frame is None:
+            continue
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        images.append(Image.fromarray(frame))
+
+    cap.release()
+    return images
 
 
 def sample_frames(video_path: str = None, keyframe_paths: Dict[str, List[str]] = None,
@@ -172,6 +220,37 @@ def sample_frames(video_path: str = None, keyframe_paths: Dict[str, List[str]] =
     cap.release()
     return sampled_frames
 
+
+def sample_frames_every_n(video_path: str, stride: int) -> List[Image.Image]:
+    """
+    Sample the whole video at a fixed frame stride.
+    """
+    if not video_path or stride <= 0:
+        return []
+
+    try:
+        import cv2
+    except ImportError:
+        return []
+
+    if not os.path.exists(video_path):
+        return []
+
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        cap.release()
+        return []
+
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    cap.release()
+    if total_frames <= 0:
+        return []
+
+    indices = list(range(0, total_frames, stride))
+    if (total_frames - 1) not in indices:
+        indices.append(total_frames - 1)
+    return _read_frame_indices(video_path, indices)
+
 def parse_vlm_response(response: str) -> Dict[str, Any]:
     """Parse VLM JSON response, with fallback for malformed output."""
     try:
@@ -196,7 +275,7 @@ def judge_action_adherence(prompt_text: str, task_type: str,
     Returns structured judgment for action following.
     """
     if task_type not in ["immediate_turn", "doorway_entry"]:
-        return {"action_adherence_score": 1.0, "confidence": 0.0, "skipped": True}
+        return {}
 
     frames = sample_frames(video_path, keyframe_paths)
     early_frames = frames.get("early", [])
@@ -266,7 +345,7 @@ def judge_doorway_entry(prompt_text: str, task_type: str,
     Judge doorway entry success using VLM.
     """
     if task_type != "doorway_entry":
-        return {"doorway_entered": True, "confidence": 0.0, "skipped": True}
+        return {}
 
     frames = sample_frames(video_path, keyframe_paths)
     all_frames = frames.get("early", []) + frames.get("middle", []) + frames.get("late", [])
@@ -300,7 +379,7 @@ def judge_turn_direction_and_onset(prompt_text: str, task_type: str,
     Judge turn direction and onset timing.
     """
     if task_type != "immediate_turn":
-        return {"turn_direction_correct": True, "confidence": 0.0, "skipped": True}
+        return {}
 
     frames = sample_frames(video_path, keyframe_paths)
     early_frames = frames.get("early", [])
@@ -359,6 +438,72 @@ Return JSON with:
     except Exception as e:
         return {"error": str(e), "progressive_drift_score": 0.5, "confidence": 0.0}
 
+
+def judge_loop_closure(prompt_text: str, task_type: str,
+                      keyframe_paths: Dict[str, List[str]] = None,
+                      video_path: str = None) -> Dict[str, Any]:
+    """
+    Judge whether a loop task returns to the starting viewpoint at the end.
+    """
+    if task_type != "loop":
+        return {}
+
+    timeline_frames = sample_frames_every_n(video_path, LOOP_CLOSURE_FRAME_STRIDE)
+    frames = sample_frames(video_path, keyframe_paths)
+    early_frames = frames.get("early", [])
+    late_frames = frames.get("late", [])
+    if not timeline_frames or not early_frames or not late_frames:
+        return {
+            "loop_closure_score": 0.5,
+            "loop_closure_achieved": False,
+            "endpoint_similarity": 0.5,
+            "confidence": 0.0,
+            "frame_stride": LOOP_CLOSURE_FRAME_STRIDE,
+        }
+
+    prompt = f"""
+Analyze whether this video forms a true visual loop.
+
+Instruction: "{prompt_text}"
+Task type: {task_type}
+
+You are shown a timeline of the video sampled at one frame every {LOOP_CLOSURE_FRAME_STRIDE} frames, in chronological order.
+The earliest images are the start of the video and the latest images are the end.
+Judge whether the end returns to the same viewpoint and scene composition as the start, and whether the whole motion reads as a coherent loop.
+
+Focus on:
+- camera/viewpoint match between start and end
+- scene layout match between start and end
+- whether the final moment could loop seamlessly back to the first frame
+
+Return JSON with:
+- loop_closure_score: float 0-1
+- loop_closure_achieved: boolean
+- endpoint_similarity: float 0-1
+- confidence: float 0-1
+"""
+
+    try:
+        response = query_vlm(prompt, timeline_frames)
+        result = parse_vlm_response(response)
+        score = float(result.get("loop_closure_score", result.get("endpoint_similarity", 0.5)))
+        endpoint_similarity = float(result.get("endpoint_similarity", score))
+        result["loop_closure_score"] = score
+        result["endpoint_similarity"] = endpoint_similarity
+        result["frame_stride"] = LOOP_CLOSURE_FRAME_STRIDE
+        if "loop_closure_achieved" not in result:
+            result["loop_closure_achieved"] = score >= 0.7 or endpoint_similarity >= 0.7
+        return result
+    except Exception as e:
+        return {
+            "error": str(e),
+            "loop_closure_score": 0.5,
+            "loop_closure_achieved": False,
+            "endpoint_similarity": 0.5,
+            "confidence": 0.0,
+            "frame_stride": LOOP_CLOSURE_FRAME_STRIDE,
+        }
+
 def get_vlm_judgments(prompt_text: str, task_type: str,
                      keyframe_paths: Dict[str, List[str]] = None,
                      video_path: str = None) -> Dict[str, Any]:
@@ -389,6 +534,12 @@ def get_vlm_judgments(prompt_text: str, task_type: str,
         except:
             pass
 
+    if task_type == "loop":
+        try:
+            judgments.update(judge_loop_closure(prompt_text, task_type, keyframe_paths, video_path))
+        except:
+            pass
+
     try:
         judgments.update(judge_progressive_drift(prompt_text, task_type, keyframe_paths, video_path))
     except:
@@ -402,6 +553,8 @@ def get_vlm_judgments(prompt_text: str, task_type: str,
     judgments["action_adherence_score"] = action_score
     judgments["scene_consistency_score"] = scene_score
     judgments["temporal_coherence_score"] = temporal_score
+    judgments["used_local_vlm"] = True
+    judgments["vlm_model_path"] = LOCAL_VLM_MODEL_PATH
 
     # Judged failure modes from VLM
     judged_failures = []
@@ -413,6 +566,8 @@ def get_vlm_judgments(prompt_text: str, task_type: str,
         judged_failures.append("doorway_not_entered")
     if judgments.get("scene_drift_visible") == True:
         judged_failures.append("progressive_scene_drift")
+    if judgments.get("loop_closure_achieved") == False:
+        judged_failures.append("loop_closure_failure")
 
     judgments["judged_failure_modes"] = judged_failures
 
@@ -420,7 +575,10 @@ def get_vlm_judgments(prompt_text: str, task_type: str,
     judgments["evidence"] = {
         "observed_action_start_segment": judgments.get("observed_action_start_segment"),
         "observed_turn_direction": judgments.get("observed_turn_direction"),
-        "doorway_entry_success": judgments.get("doorway_entered")
+        "doorway_entry_success": judgments.get("doorway_entered"),
+        "endpoint_similarity": judgments.get("endpoint_similarity"),
+        "loop_closure_score": judgments.get("loop_closure_score"),
+        "loop_frame_stride": judgments.get("frame_stride"),
     }
 
     return judgments

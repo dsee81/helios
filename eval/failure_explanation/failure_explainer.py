@@ -113,6 +113,12 @@ def explain_failures(raw_metrics: dict,
                 task_specific_metrics["observed_turn_direction"] = vlm_result["observed_turn_direction"]
             if "doorway_entered" in vlm_result:
                 task_specific_metrics["doorway_entry_success"] = vlm_result["doorway_entered"]
+            if "endpoint_similarity" in vlm_result:
+                task_specific_metrics["endpoint_similarity"] = vlm_result["endpoint_similarity"]
+            if "loop_closure_score" in vlm_result:
+                task_specific_metrics["loop_closure_score"] = vlm_result["loop_closure_score"]
+            if "loop_closure_achieved" in vlm_result:
+                task_specific_metrics["loop_closure_achieved"] = vlm_result["loop_closure_achieved"]
         else:
             vlm_judgments = {"vlm_unavailable": True}
     except Exception as e:

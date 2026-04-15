@@ -22,8 +22,13 @@ pipe = HeliosPyramidPipeline.from_pretrained(
 )
 pipe.to("cuda")
 
-cuda_major = torch.cuda.get_device_capability()[0]
-if cuda_major >= 9:
+requested_backend = os.environ.get("HELIOS_ATTENTION_BACKEND", "").strip().lower()
+cuda_major, cuda_minor = torch.cuda.get_device_capability()
+if requested_backend:
+    pipe.transformer.set_attention_backend(requested_backend)
+elif (cuda_major, cuda_minor) >= (10, 0):
+    pipe.transformer.set_attention_backend("native")
+elif cuda_major >= 9:
     # H100/H800 (SM90+) with FA3
     try:
         pipe.transformer.set_attention_backend("_flash_3_hub")
