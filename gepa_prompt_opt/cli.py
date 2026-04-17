@@ -14,6 +14,13 @@ def main(argv: list[str] | None = None) -> int:
     opt.add_argument("--repo_root", type=str, required=True)
     opt.add_argument("--dataset_manifest", type=str, required=True)
     opt.add_argument("--seed_template", type=str, required=True)
+    opt.add_argument(
+        "--extra_seed_template",
+        type=str,
+        action="append",
+        default=[],
+        help="Optional additional seed template(s) evaluated in the same run before GEPA starts.",
+    )
     opt.add_argument("--work_dir", type=str, required=True)
     opt.add_argument("--num_iterations", type=int, default=10)
     opt.add_argument("--candidates_per_iteration", type=int, default=4)
@@ -43,6 +50,7 @@ def main(argv: list[str] | None = None) -> int:
             work_dir=Path(args.work_dir),
             dataset_manifest=Path(args.dataset_manifest),
             seed_template=Path(args.seed_template),
+            extra_seed_templates=[Path(p) for p in args.extra_seed_template],
             num_iterations=int(args.num_iterations),
             candidates_per_iteration=int(args.candidates_per_iteration),
             inference_cuda_visible_devices=str(args.inference_cuda_visible_devices),

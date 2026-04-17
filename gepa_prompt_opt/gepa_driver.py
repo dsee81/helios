@@ -55,6 +55,7 @@ class OptimizeConfig:
     work_dir: Path
     dataset_manifest: Path
     seed_template: Path
+    extra_seed_templates: tuple[Path, ...] = ()
     num_iterations: int = 10
     candidates_per_iteration: int = 4
     reflection_lm: str = "deepseek/deepseek-chat"
@@ -83,6 +84,7 @@ def normalize_config(cfg: OptimizeConfig) -> OptimizeConfig:
         work_dir=_abs(repo_root, cfg.work_dir),
         dataset_manifest=_abs(repo_root, cfg.dataset_manifest),
         seed_template=_abs(repo_root, cfg.seed_template),
+        extra_seed_templates=tuple(_abs(repo_root, p) for p in cfg.extra_seed_templates),
         num_iterations=cfg.num_iterations,
         candidates_per_iteration=cfg.candidates_per_iteration,
         reflection_lm=cfg.reflection_lm,
@@ -95,6 +97,57 @@ def normalize_config(cfg: OptimizeConfig) -> OptimizeConfig:
         disable_vlm=cfg.disable_vlm,
         run_naturalness=cfg.run_naturalness,
     )
+
+
+def bootstrap_seed_candidates(cfg: OptimizeConfig) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    cfg = normalize_config(cfg)
+    seed_paths = [cfg.seed_template, *cfg.extra_seed_templates]
+    unique_seed_paths: list[Path] = []
+    seen: set[str] = set()
+    for path in seed_paths:
+        resolved = str(path.resolve())
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        unique_seed_paths.append(path)
+
+    evaluated: list[dict[str, Any]] = []
+    for idx, seed_path in enumerate(unique_seed_paths):
+        template_data = load_template(cfg.repo_root, seed_path).raw
+        candidate_name = f"seed_{idx:02d}_{seed_path.stem}"
+        print(f"Bootstrapping {candidate_name} from {seed_path}")
+        j, side_info = evaluate_template_candidate(cfg, template_data=template_data, candidate_name=candidate_name)
+        evaluated.append(
+            {
+                "seed_template_path": str(seed_path.resolve()),
+                "candidate_name": candidate_name,
+                "J": j,
+                "side_info": side_info,
+                "template_data": template_data,
+            }
+        )
+
+    if not evaluated:
+        raise RuntimeError("No seed templates were available for GEPA bootstrap.")
+
+    best = max(evaluated, key=lambda item: float(item["J"]))
+    write_json(
+        cfg.work_dir / "seed_bootstrap_summary.json",
+        {
+            "selected_seed_template_path": best["seed_template_path"],
+            "selected_candidate_name": best["candidate_name"],
+            "selected_J": best["J"],
+            "evaluated_seeds": [
+                {
+                    "seed_template_path": item["seed_template_path"],
+                    "candidate_name": item["candidate_name"],
+                    "J": item["J"],
+                }
+                for item in evaluated
+            ],
+        },
+    )
+    return best["template_data"], evaluated
 
 
 def evaluate_template_candidate(
@@ -216,7 +269,7 @@ def optimize_with_gepa(cfg: OptimizeConfig) -> dict[str, Any]:
     cfg = normalize_config(cfg)
     cfg.work_dir.mkdir(parents=True, exist_ok=True)
 
-    seed = load_template(cfg.repo_root, cfg.seed_template).raw
+    seed, _ = bootstrap_seed_candidates(cfg)
 
     try:
         from gepa.optimize_anything import EngineConfig, GEPAConfig, ReflectionConfig, optimize_anything  # type: ignore

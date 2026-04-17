@@ -9,7 +9,7 @@ from accelerate.utils import ProjectConfiguration
 from diffusers.optimization import get_scheduler
 from torch.utils.data import DataLoader
 
-from prefix_opt.generator import HeliosPrefixV2VGenerator
+from prefix_opt.generator import HeliosPrefixV2VGenerator, flatten_video_latent_sections, split_history_target_sections
 from prefix_opt.utils import ensure_dir, set_seed
 
 from .checkpointing import load_turn_ti_checkpoint, save_turn_ti_checkpoint
@@ -59,6 +59,7 @@ def main():
         num_frames=cfg.data.num_frames,
         height=cfg.data.height,
         width=cfg.data.width,
+        load_source_video=cfg.data.load_source_video,
         cache_metadata=cfg.data.cache_metadata,
         force_rebuild=cfg.data.force_rebuild,
         strict_paths=cfg.data.strict_paths,
@@ -108,6 +109,7 @@ def main():
         embedding_bank, optimizer, train_loader, lr_scheduler
     )
     negative_prompt_embeds = generator.encode_prompt_text([cfg.model.negative_prompt]).to(generator.transformer.dtype)
+    generator.offload_text_encoder()
 
     while global_step < cfg.train.max_train_steps:
         for batch in train_loader:
@@ -121,16 +123,22 @@ def main():
                     embedding_bank=accelerator.unwrap_model(embedding_bank),
                     negative_prompt_embeds=negative_batch,
                 )
-                _, generated_video = generator.generate_training_video(
-                    prompt_embeds=conditioned.prompt_embeds,
-                    negative_prompt_embeds=conditioned.negative_prompt_embeds,
-                    video_latent_sections=batch["video_latent_sections"].to(accelerator.device),
+                history_sections, target_sections = split_history_target_sections(
+                    batch["video_latent_sections"],
                     num_generation_sections=cfg.generation.num_generation_sections,
                 )
-                source_video = batch["source_videos"].to(accelerator.device, dtype=generated_video.dtype)
+                generated_latents = generator.generate_training_latents(
+                    prompt_embeds=conditioned.prompt_embeds,
+                    negative_prompt_embeds=conditioned.negative_prompt_embeds,
+                    video_latent_sections=history_sections.to(accelerator.device),
+                    num_generation_sections=cfg.generation.num_generation_sections,
+                )
+                target_latents = flatten_video_latent_sections(target_sections).to(
+                    accelerator.device, dtype=generated_latents.dtype
+                )
                 total_loss, logs = compute_turn_ti_losses(
-                    generated_video=generated_video,
-                    source_video=source_video,
+                    generated_latents=generated_latents,
+                    target_latents=target_latents,
                     embedding_bank=accelerator.unwrap_model(embedding_bank),
                     loss_cfg=cfg.loss,
                 )

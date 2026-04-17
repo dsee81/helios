@@ -1,10 +1,13 @@
 import torch
 from kernels import get_kernel
 
+major, minor = torch.cuda.get_device_capability()
+is_blackwell_or_newer = (major, minor) >= (10, 0)
 
 try:
     # FA3 Only support Hopper (SM90, H100/H800)
-    major, _ = torch.cuda.get_device_capability()
+    if is_blackwell_or_newer:
+        raise RuntimeError("FA3 hub/local kernels are not supported on SM100/B200 in this environment")
     if major < 9:
         raise RuntimeError("FA3 requires Hopper (SM90+), current GPU not supported")
     flash_attn3 = get_kernel("kernels-community/flash-attn3")
@@ -13,12 +16,16 @@ try:
     print("Flash Attn 3 is installed!")
 except (ImportError, RuntimeError):
     try:
+        if is_blackwell_or_newer:
+            raise RuntimeError("FlashAttention kernels disabled on SM100/B200; falling back to non-Flash attention")
         # Prefer the locally installed flash-attn package (does not require Hub access).
         from flash_attn.flash_attn_interface import flash_attn_func, flash_attn_varlen_func
 
         print("Flash Attn 2 is installed!")
     except Exception:
         try:
+            if is_blackwell_or_newer:
+                raise RuntimeError("FlashAttention kernels disabled on SM100/B200; falling back to non-Flash attention")
             # Fallback: kernels-community packages (may require HF Hub download).
             flash_attn2 = get_kernel("kernels-community/flash-attn2")
             flash_attn_func = flash_attn2.flash_attn_func

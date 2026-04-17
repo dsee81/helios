@@ -15,6 +15,7 @@ class TurnTIDataConfig:
     num_frames: Optional[int] = None
     height: int = 384
     width: int = 640
+    load_source_video: bool = False
     cache_metadata: bool = True
     force_rebuild: bool = False
     strict_paths: bool = True
@@ -104,6 +105,7 @@ class TurnTITrainConfig:
     save_every: int = 100
     max_eval_batches: int = 8
     allow_tf32: bool = False
+    gradient_checkpointing: bool = True
     log_with: Optional[str] = None
     single_gpu_only: bool = True
 

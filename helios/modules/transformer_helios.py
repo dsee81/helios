@@ -1647,6 +1647,9 @@ class HeliosTransformer3DModel(
             for key in transformer_additional_kwargs["dict_mapping"]:
                 transformer_additional_kwargs[transformer_additional_kwargs["dict_mapping"][key]] = config[key]
 
+        def _stage(message):
+            print(f"[HeliosTransformer3DModel.from_pretrained] {message}", flush=True)
+
         def remap_state_dict_keys(state_dict):
             """Remap old key names to new key names for compatibility."""
             remapped = {}
@@ -1662,6 +1665,7 @@ class HeliosTransformer3DModel(
         if low_cpu_mem_usage:
             try:
                 import re
+                import time
 
                 from diffusers import __version__ as diffusers_version
                 from diffusers.models.model_loading_utils import load_model_dict_into_meta
@@ -1671,42 +1675,77 @@ class HeliosTransformer3DModel(
                     import accelerate
 
                 # Instantiate model with empty weights
+                t0 = time.perf_counter()
+                _stage("low_cpu_mem_usage path: constructing empty model")
                 with accelerate.init_empty_weights():
                     model = cls.from_config(config, **transformer_additional_kwargs)
+                _stage(f"empty model constructed in {time.perf_counter() - t0:.2f}s")
 
                 param_device = "cpu"
                 if os.path.exists(model_file):
+                    _stage("loading single .bin checkpoint into CPU state_dict")
                     state_dict = torch.load(model_file, map_location="cpu")
                 elif os.path.exists(model_file_safetensors):
                     from safetensors.torch import load_file
 
+                    _stage("loading single .safetensors checkpoint into CPU state_dict")
                     state_dict = load_file(model_file_safetensors)
                 else:
                     from safetensors.torch import load_file
 
                     model_files_safetensors = glob.glob(os.path.join(pretrained_model_path, "*.safetensors"))
-                    state_dict = {}
-                    print(f"Loading {len(model_files_safetensors)} safetensors files with {max_workers} workers...")
-                    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                        future_to_file = {executor.submit(load_file, f): f for f in model_files_safetensors}
-                        for future in as_completed(future_to_file):
-                            _state_dict = future.result()
-                            state_dict.update(_state_dict)
-
-                # Remap keys before loading into meta model
-                state_dict = remap_state_dict_keys(state_dict)
+                    index_file = os.path.join(pretrained_model_path, "diffusion_pytorch_model.safetensors.index.json")
+                    ordered_files = model_files_safetensors
+                    if os.path.isfile(index_file):
+                        with open(index_file, "r", encoding="utf-8") as handle:
+                            index_data = json.load(handle)
+                        weight_map = index_data.get("weight_map", {})
+                        ordered_files = sorted(
+                            {os.path.join(pretrained_model_path, shard_name) for shard_name in weight_map.values()}
+                        )
+                    _stage(f"stream-loading {len(ordered_files)} safetensor shards into meta model")
+                    state_dict = None
 
                 if diffusers_version >= "0.33.0":
                     # Diffusers has refactored `load_model_dict_into_meta` since version 0.33.0 in this commit:
                     # https://github.com/huggingface/diffusers/commit/f5929e03060d56063ff34b25a8308833bec7c785.
-                    load_model_dict_into_meta(
-                        model,
-                        state_dict,
-                        dtype=torch_dtype,
-                        model_name_or_path=pretrained_model_path,
-                        keep_in_fp32_modules=cls._keep_in_fp32_modules,
-                    )
+                    if state_dict is not None:
+                        state_dict = remap_state_dict_keys(state_dict)
+                        _stage("assigning single checkpoint into meta model")
+                        load_model_dict_into_meta(
+                            model,
+                            state_dict,
+                            dtype=torch_dtype,
+                            model_name_or_path=pretrained_model_path,
+                            keep_in_fp32_modules=cls._keep_in_fp32_modules,
+                        )
+                    else:
+                        for shard_idx, shard_path in enumerate(ordered_files, start=1):
+                            shard_t0 = time.perf_counter()
+                            shard_state_dict = load_file(shard_path)
+                            shard_state_dict = remap_state_dict_keys(shard_state_dict)
+                            _stage(
+                                f"assigning shard {shard_idx}/{len(ordered_files)} "
+                                f"({os.path.basename(shard_path)}) with {len(shard_state_dict)} tensors"
+                            )
+                            load_model_dict_into_meta(
+                                model,
+                                shard_state_dict,
+                                dtype=torch_dtype,
+                                model_name_or_path=pretrained_model_path,
+                                keep_in_fp32_modules=cls._keep_in_fp32_modules,
+                            )
+                            _stage(
+                                f"finished shard {shard_idx}/{len(ordered_files)} "
+                                f"in {time.perf_counter() - shard_t0:.2f}s"
+                            )
                 else:
+                    if state_dict is None:
+                        state_dict = {}
+                        for shard_idx, shard_path in enumerate(ordered_files, start=1):
+                            _stage(f"materializing shard {shard_idx}/{len(ordered_files)} for legacy loader")
+                            state_dict.update(load_file(shard_path))
+                    state_dict = remap_state_dict_keys(state_dict)
                     model._convert_deprecated_attention_blocks(state_dict)
                     # move the params from meta device to cpu
                     missing_keys = set(model.state_dict().keys()) - set(state_dict.keys())
@@ -1735,6 +1774,7 @@ class HeliosTransformer3DModel(
                             f"Some weights of the model checkpoint were not used when initializing {cls.__name__}: \n {[', '.join(unexpected_keys)]}"
                         )
 
+                _stage("low_cpu_mem_usage load complete")
                 return model
             except Exception as e:
                 print(f"The low_cpu_mem_usage mode is not work because {e}. Use low_cpu_mem_usage=False instead.")

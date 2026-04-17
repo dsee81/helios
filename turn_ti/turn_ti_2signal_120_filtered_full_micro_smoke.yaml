@@ -1,7 +1,7 @@
 data:
-  manifest_path: /mnt/shared_storage/dsee/Helios/data/turn_ti_manifest.csv
+  manifest_path: /root/dataDisk/turn_ti_manifest_120_filtered.csv
   prompt_fallback: A driving scene from a forward-facing camera.
-  num_frames: 81
+  num_frames: 120
   height: 384
   width: 640
   load_source_video: false
@@ -10,8 +10,8 @@ data:
   strict_paths: true
 
 model:
-  pretrained_model_name_or_path: BestWishYsh/Helios-Base
-  scheduler_config_path: /mnt/shared_storage/dsee/Helios/scripts/accelerate_configs/scheduler_config.json
+  pretrained_model_name_or_path: /root/dataDisk/BestWishYSH/Helios-Distilled
+  scheduler_config_path: /root/dataDisk/Helios/scripts/accelerate_configs/scheduler_config.json
   mixed_precision: bf16
   num_bins: 6
   num_vectors: 4
@@ -46,17 +46,24 @@ loss:
   temporal_smoothness_weight: 0.05
 
 train:
-  output_dir: /mnt/shared_storage/dsee/Helios/output_helios/turn_ti
+  output_dir: /root/dataDisk/Helios/output_helios/turn_ti_2signal_120_filtered_full_micro_smoke
   logging_dir: logs
+  seed: 43
   train_batch_size: 1
-  dataloader_num_workers: 2
-  max_train_steps: 200
+  dataloader_num_workers: 0
+  pin_memory: false
+  persistent_workers: false
+  prefetch_factor: 2
+  max_train_steps: 3
+  gradient_accumulation_steps: 1
   learning_rate: 5.0e-4
-  save_every: 50
+  save_every: 1
+  allow_tf32: false
   gradient_checkpointing: true
+  log_with: null
   single_gpu_only: true
 
 inference:
-  output_path: /mnt/shared_storage/dsee/Helios/output_helios/turn_ti/infer.mp4
+  output_path: /root/dataDisk/Helios/output_helios/turn_ti_2signal_120_filtered_full_micro_smoke/infer.mp4
   fps: 24
   disable_bank: false

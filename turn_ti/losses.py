@@ -23,20 +23,20 @@ def neighbor_smoothness_loss(effective_bank: torch.Tensor) -> torch.Tensor:
 
 
 def compute_turn_ti_losses(
-    generated_video: torch.Tensor,
-    source_video: torch.Tensor,
+    generated_latents: torch.Tensor,
+    target_latents: torch.Tensor,
     embedding_bank,
     loss_cfg,
 ) -> tuple[torch.Tensor, Dict[str, float]]:
-    common_frames = min(generated_video.shape[2], source_video.shape[2])
-    generated_video = generated_video[:, :, :common_frames]
-    source_video = source_video[:, :, :common_frames]
+    common_frames = min(generated_latents.shape[2], target_latents.shape[2])
+    generated_latents = generated_latents[:, :, :common_frames]
+    target_latents = target_latents[:, :, :common_frames]
 
-    reconstruction = F.l1_loss(generated_video, source_video)
+    reconstruction = F.l1_loss(generated_latents, target_latents)
     bank = embedding_bank.effective_bank()
     anchor = anchor_loss(bank, embedding_bank.init_bank)
     neighbor = neighbor_smoothness_loss(bank)
-    smoothness = temporal_smoothness_loss(generated_video)
+    smoothness = temporal_smoothness_loss(generated_latents)
 
     total = (
         reconstruction * loss_cfg.reconstruction_weight

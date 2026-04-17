@@ -3,12 +3,15 @@ from __future__ import annotations
 import os
 import pickle
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict, List
 
 import pandas as pd
 import torch
+import torch.nn.functional as F
 from PIL import Image
 from torch.utils.data import Dataset
+from video_reader import PyVideoReader
 
 from prefix_opt.utils import maybe_to_pil
 
@@ -36,6 +39,7 @@ class TurnBinLatentVideoDataset(Dataset):
         num_frames: int | None = None,
         height: int = 384,
         width: int = 640,
+        load_source_video: bool = False,
         cache_metadata: bool = True,
         force_rebuild: bool = False,
         strict_paths: bool = True,
@@ -45,9 +49,14 @@ class TurnBinLatentVideoDataset(Dataset):
         self.num_frames = num_frames
         self.height = height
         self.width = width
+        self.load_source_video = load_source_video
         self.strict_paths = strict_paths
 
-        metadata_cache_path = os.path.join(os.path.dirname(manifest_path), "turn_ti_dataset_cache.pkl")
+        manifest_stem = Path(manifest_path).stem
+        metadata_cache_path = os.path.join(
+            os.path.dirname(manifest_path),
+            f"turn_ti_dataset_cache_{manifest_stem}.pkl",
+        )
         if cache_metadata and os.path.exists(metadata_cache_path) and not force_rebuild:
             with open(metadata_cache_path, "rb") as handle:
                 self.samples = pickle.load(handle)
@@ -108,28 +117,67 @@ class TurnBinLatentVideoDataset(Dataset):
     def __len__(self) -> int:
         return len(self.samples)
 
+    def _load_exact_video_chunk(self, video_path: str, start_frame: int, end_frame: int) -> torch.Tensor:
+        reader_info = PyVideoReader(video_path, threads=0)
+        total_frames, original_height, original_width = reader_info.get_shape()
+        if end_frame > total_frames:
+            raise ValueError(
+                f"Requested frames [{start_frame}, {end_frame}) exceed video length {total_frames} for {video_path}"
+            )
+
+        original_aspect_ratio = original_width / original_height
+        if self.width > self.height:
+            target_width = self.width
+            target_height = int(self.width / original_aspect_ratio)
+        else:
+            target_height = self.height
+            target_width = int(self.height * original_aspect_ratio)
+        target_height = int(round(target_height / 2) * 2)
+        target_width = int(round(target_width / 2) * 2)
+
+        reader = PyVideoReader(video_path, target_height=target_height, target_width=target_width, threads=0)
+        frame_indices = list(range(start_frame, end_frame))
+        frames = torch.from_numpy(reader.get_batch(frame_indices)).float()  # [T, H, W, C]
+        frames = frames.permute(0, 3, 1, 2)  # [T, C, H, W]
+
+        _, _, cur_h, cur_w = frames.shape
+        aspect_ratio_original = cur_h / cur_w
+        aspect_ratio_target = self.height / self.width
+        if aspect_ratio_original >= aspect_ratio_target:
+            new_h = int(cur_w * aspect_ratio_target)
+            top = (cur_h - new_h) // 2
+            frames = frames[:, :, top : top + new_h, :]
+        else:
+            new_w = int(cur_h / aspect_ratio_target)
+            left = (cur_w - new_w) // 2
+            frames = frames[:, :, :, left : left + new_w]
+
+        frames = F.interpolate(frames, size=(self.height, self.width), mode="bilinear", align_corners=False)
+        return frames
+
     def __getitem__(self, index: int) -> Dict[str, object]:
         sample = self.samples[index]
         latent_payload = torch.load(sample.latent_path, map_location="cpu", weights_only=False)
         prompt_embed = latent_payload["prompt_embed"]
         if prompt_embed.ndim == 2:
             prompt_embed = prompt_embed.unsqueeze(0)
-
-        from eval.utils.utils import load_video
-
-        source_video = load_video(
-            sample.video_path,
-            num_frames=self.num_frames,
-            return_tensor=True,
-            width=self.width,
-            height=self.height,
-        )
-        source_video = (source_video.float() / 127.5) - 1.0
-        source_video = source_video.permute(1, 0, 2, 3).contiguous()
         first_frame_image = maybe_to_pil(latent_payload.get("first_frames_image"))
-        if first_frame_image is None:
+        source_video = None
+        if self.load_source_video:
+            source_video = self._load_exact_video_chunk(
+                video_path=sample.video_path,
+                start_frame=sample.start_frame,
+                end_frame=sample.end_frame,
+            )
+            if self.num_frames is not None and source_video.shape[0] > self.num_frames:
+                source_video = source_video[: self.num_frames]
+            source_video = (source_video.float() / 127.5) - 1.0
+            source_video = source_video.permute(1, 0, 2, 3).contiguous()
+        if first_frame_image is None and source_video is not None:
             first_frame = ((source_video[:, 0] + 1.0) * 127.5).clamp(0, 255).to(torch.uint8)
             first_frame_image = Image.fromarray(first_frame.permute(1, 2, 0).cpu().numpy()).convert("RGB")
+        elif first_frame_image is None:
+            raise ValueError(f"Missing first frame image and source video is disabled for sample {sample.sample_id}.")
 
         return {
             "sample_id": sample.sample_id,
@@ -139,7 +187,7 @@ class TurnBinLatentVideoDataset(Dataset):
             "prompt_embed": prompt_embed.float(),
             "video_latent_sections": latent_payload["vae_latent"].float(),
             "first_frame_image": first_frame_image,
-            "source_video": source_video.float(),
+            "source_video": source_video.float() if source_video is not None else None,
             "csv_path": sample.csv_path,
             "video_path": sample.video_path,
             "latent_path": sample.latent_path,
@@ -151,7 +199,7 @@ class TurnBinLatentVideoDataset(Dataset):
 
 
 def collate_turn_ti_batch(batch: List[Dict[str, object]]) -> Dict[str, object]:
-    return {
+    collated = {
         "sample_ids": [item["sample_id"] for item in batch],
         "bin_names": [item["bin_name"] for item in batch],
         "bin_ids": torch.stack([item["bin_id"] for item in batch], dim=0),
@@ -159,7 +207,6 @@ def collate_turn_ti_batch(batch: List[Dict[str, object]]) -> Dict[str, object]:
         "prompt_embeds": torch.cat([item["prompt_embed"] for item in batch], dim=0),
         "video_latent_sections": torch.stack([item["video_latent_sections"] for item in batch], dim=0),
         "first_frame_images": [item["first_frame_image"] for item in batch],
-        "source_videos": torch.stack([item["source_video"] for item in batch], dim=0),
         "csv_paths": [item["csv_path"] for item in batch],
         "video_paths": [item["video_path"] for item in batch],
         "latent_paths": [item["latent_path"] for item in batch],
@@ -168,3 +215,6 @@ def collate_turn_ti_batch(batch: List[Dict[str, object]]) -> Dict[str, object]:
         "end_frames": torch.tensor([item["end_frame"] for item in batch], dtype=torch.long),
         "chunk_lengths": torch.tensor([item["chunk_length"] for item in batch], dtype=torch.long),
     }
+    if batch[0]["source_video"] is not None:
+        collated["source_videos"] = torch.stack([item["source_video"] for item in batch], dim=0)
+    return collated

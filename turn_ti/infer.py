@@ -5,7 +5,7 @@ import argparse
 import torch
 from diffusers.utils import export_to_video
 
-from prefix_opt.generator import HeliosPrefixV2VGenerator
+from prefix_opt.generator import HeliosPrefixV2VGenerator, split_history_target_sections
 
 from .bins import TURN_BIN_TO_ID, normalize_turn_bin_name
 from .checkpointing import load_turn_ti_checkpoint
@@ -36,6 +36,7 @@ def main():
         num_frames=cfg.data.num_frames,
         height=cfg.data.height,
         width=cfg.data.width,
+        load_source_video=cfg.data.load_source_video,
         cache_metadata=cfg.data.cache_metadata,
         force_rebuild=False,
         strict_paths=cfg.data.strict_paths,
@@ -64,10 +65,14 @@ def main():
         embedding_bank=embedding_bank,
         negative_prompt_embeds=negative_prompt_embeds,
     )
+    history_sections, _ = split_history_target_sections(
+        sample["video_latent_sections"].unsqueeze(0),
+        num_generation_sections=cfg.generation.num_generation_sections,
+    )
     generated_video = generator.run_inference(
         prompt_embeds=conditioned.prompt_embeds,
         negative_prompt_embeds=conditioned.negative_prompt_embeds,
-        video_latent_sections=sample["video_latent_sections"].unsqueeze(0).to(generator.device),
+        video_latent_sections=history_sections.to(generator.device),
     )
     frames = ((generated_video[0].detach().clamp(-1, 1) + 1.0) * 127.5).to(torch.uint8).permute(1, 2, 3, 0).cpu().numpy()
     export_to_video(frames, output_path, fps=cfg.inference.fps)
