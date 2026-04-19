@@ -45,8 +45,10 @@ It optimizes a **prompt template** (not per-video prompts) for the **`loop` / re
 
 5. **GEPA must be installed and configured**
    - Install GEPA per its docs.
-   - Configure the LLM provider GEPA will use (API key / base URL) per GEPA docs.
-   - This project calls DeepSeek directly (no LiteLLM). Set `DEEPSEEK_API_KEY` in the job environment.
+   - The current default reflection model is local Qwen via `local:/root/dataDisk/dsee_temp_storage/Qwen/Qwen3-32B`.
+   - Set `GEPA_LOCAL_QWEN_PATH` if Qwen lives somewhere else.
+   - Set `GEPA_LOCAL_LM_DEVICE` to place Qwen on a separate GPU from Helios inference.
+   - DeepSeek is still available by passing `--reflection_lm deepseek/deepseek-chat` and setting `DEEPSEEK_API_KEY`.
 
 ## Checklist (before first run)
 
@@ -77,7 +79,7 @@ python -m gepa_prompt_opt.cli optimize-loop \
   --num_frames 240 \
   --eval_split train \
   --disable_vlm \
-  --reflection_lm deepseek/deepseek-chat
+  --reflection_lm local:/root/dataDisk/dsee_temp_storage/Qwen/Qwen3-32B
 ```
 
 Artifacts are written under `--work_dir` as:
@@ -95,4 +97,7 @@ Artifacts are written under `--work_dir` as:
 - `gepa_prompt_opt/eval_pipeline.py`: runs `eval/run_metrics.sh` with environment variables and returns the path to `combined_video_report.json`.
 - `gepa_prompt_opt/aggregate.py`: computes per-video score + failure penalty from the combined report; aggregates to objective `J` and GEPA-friendly `side_info`.
 - `gepa_prompt_opt/gepa_driver.py`: orchestrates the full candidate evaluation and plugs it into GEPA.
+- `gepa_prompt_opt/local_hf_lm.py`: local Hugging Face reflection backend for Qwen-style causal LMs.
 - `gepa_prompt_opt/cli.py`: command line interface.
+
+For the recovered Qwen-enhanced cyclic objective, see `gepa_prompt_opt/EXPLANATION.md`.

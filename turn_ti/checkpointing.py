@@ -8,9 +8,16 @@ import torch
 from prefix_opt.utils import ensure_dir
 
 
-def save_turn_ti_checkpoint(output_dir: str, step: int, embedding_bank, optimizer=None, metadata: Optional[dict] = None) -> str:
+def save_turn_ti_checkpoint(
+    output_dir: str,
+    step: int,
+    embedding_bank,
+    optimizer=None,
+    metadata: Optional[dict] = None,
+    filename: Optional[str] = None,
+) -> str:
     ensure_dir(output_dir)
-    checkpoint_path = os.path.join(output_dir, f"turn_ti_checkpoint_{step:08d}.pt")
+    checkpoint_path = os.path.join(output_dir, filename or f"turn_ti_checkpoint_{step:08d}.pt")
     payload = {
         "step": step,
         "embedding_bank": embedding_bank.state_dict(),

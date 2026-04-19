@@ -14,6 +14,7 @@ from .dataset_manifest import load_loop_dataset
 from .eval_pipeline import EvalPipelineConfig, run_eval_pipeline
 from .helios_infer import HeliosV2VConfig, run_v2v_inference
 from .io_utils import sha256_json, write_json
+from .local_hf_lm import DEFAULT_LOCAL_QWEN_PATH, LocalHFConfig, make_local_hf_lm
 from .template import load_template, render_prompt, validate_template_data
 
 FIXED_TEMPLATE_REFLECTION_PROMPT = """I am optimizing a JSON prompt template. The current template is:
@@ -58,7 +59,7 @@ class OptimizeConfig:
     extra_seed_templates: tuple[Path, ...] = ()
     num_iterations: int = 10
     candidates_per_iteration: int = 4
-    reflection_lm: str = "deepseek/deepseek-chat"
+    reflection_lm: str = f"local:{DEFAULT_LOCAL_QWEN_PATH}"
 
     # Inference (black-box script is parsed; not modified)
     inference_script_path: Path = Path("scripts/inference/helios-distilled_v2v.sh")
@@ -306,7 +307,10 @@ def optimize_with_gepa(cfg: OptimizeConfig) -> dict[str, Any]:
         print(f"Evaluating {candidate_name}")
         return evaluate_template_candidate(cfg, template_data=template_data, candidate_name=candidate_name)
 
-    reflection_callable = make_deepseek_lm(DeepSeekClientConfig(model=cfg.reflection_lm))
+    if str(cfg.reflection_lm).startswith("local:"):
+        reflection_callable = make_local_hf_lm(LocalHFConfig(model_path=cfg.reflection_lm))
+    else:
+        reflection_callable = make_deepseek_lm(DeepSeekClientConfig(model=cfg.reflection_lm))
 
     result = optimize_anything(
         seed_candidate=json.dumps(seed, ensure_ascii=False),

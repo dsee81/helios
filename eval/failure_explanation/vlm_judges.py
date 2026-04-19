@@ -3,13 +3,14 @@
 
 import json
 import os
+import math
 from typing import List, Dict, Any, Optional, Union
 
 import torch
 from PIL import Image
 
-# Hardcoded local Qwen2.5-VL model location
-LOCAL_VLM_MODEL_PATH = "/tmp/Qwen2.5-VL-7B-Instruct"
+# Local VLM model location. Override this when the model lives outside /tmp.
+LOCAL_VLM_MODEL_PATH = os.environ.get("HELIOS_LOCAL_VLM_MODEL_PATH", "/tmp/Qwen2.5-VL-7B-Instruct")
 LOOP_CLOSURE_FRAME_STRIDE = 6
 
 # Global cache for loaded model and processor
@@ -251,6 +252,62 @@ def sample_frames_every_n(video_path: str, stride: int) -> List[Image.Image]:
         indices.append(total_frames - 1)
     return _read_frame_indices(video_path, indices)
 
+
+def _image_similarity(a: Image.Image, b: Image.Image) -> float:
+    try:
+        import numpy as np
+        from skimage.metrics import structural_similarity
+
+        aa = np.asarray(a.convert("L").resize((128, 72)), dtype="float32") / 255.0
+        bb = np.asarray(b.convert("L").resize((128, 72)), dtype="float32") / 255.0
+        return max(0.0, min(1.0, float(structural_similarity(aa, bb, data_range=1.0))))
+    except Exception:
+        import numpy as np
+
+        aa = np.asarray(a.convert("RGB").resize((96, 54)), dtype="float32") / 255.0
+        bb = np.asarray(b.convert("RGB").resize((96, 54)), dtype="float32") / 255.0
+        mse = float(((aa - bb) ** 2).mean())
+        return max(0.0, min(1.0, 1.0 - math.sqrt(mse)))
+
+
+def _cycle_revisit_metrics(frames: List[Image.Image]) -> Dict[str, float]:
+    if len(frames) < 4:
+        return {
+            "best_revisit_similarity": 0.5,
+            "mean_topk_revisit_similarity": 0.5,
+            "revisit_near_end_score": 0.5,
+            "cyclic_trajectory_score": 0.5,
+            "seam_smoothness_score": 0.5,
+        }
+
+    first = frames[0]
+    last = frames[-1]
+    late_start = max(1, int(len(frames) * 0.65))
+    late_frames = frames[late_start:]
+    late_sims = [_image_similarity(first, frame) for frame in late_frames] or [_image_similarity(first, last)]
+    sorted_sims = sorted(late_sims, reverse=True)
+    topk = sorted_sims[: min(3, len(sorted_sims))]
+    best_revisit = sorted_sims[0]
+    mean_topk = sum(topk) / len(topk)
+
+    endpoint = _image_similarity(first, last)
+    seam_prev = _image_similarity(frames[-2], last)
+    seam_next = endpoint
+    seam = 0.5 * seam_prev + 0.5 * seam_next
+
+    early_anchor = frames[min(1, len(frames) - 1)]
+    late_anchor = frames[max(0, len(frames) - 2)]
+    trajectory_return = _image_similarity(early_anchor, late_anchor)
+    cyclic = 0.45 * mean_topk + 0.35 * trajectory_return + 0.20 * endpoint
+
+    return {
+        "best_revisit_similarity": float(best_revisit),
+        "mean_topk_revisit_similarity": float(mean_topk),
+        "revisit_near_end_score": float(0.65 * mean_topk + 0.35 * endpoint),
+        "cyclic_trajectory_score": float(cyclic),
+        "seam_smoothness_score": float(seam),
+    }
+
 def parse_vlm_response(response: str) -> Dict[str, Any]:
     """Parse VLM JSON response, with fallback for malformed output."""
     try:
@@ -461,6 +518,8 @@ def judge_loop_closure(prompt_text: str, task_type: str,
             "frame_stride": LOOP_CLOSURE_FRAME_STRIDE,
         }
 
+    cycle_metrics = _cycle_revisit_metrics(timeline_frames)
+
     prompt = f"""
 Analyze whether this video forms a true visual loop.
 
@@ -471,28 +530,38 @@ You are shown a timeline of the video sampled at one frame every {LOOP_CLOSURE_F
 The earliest images are the start of the video and the latest images are the end.
 Judge whether the end returns to the same viewpoint and scene composition as the start, and whether the whole motion reads as a coherent loop.
 
-Focus on:
-- camera/viewpoint match between start and end
-- scene layout match between start and end
-- whether the final moment could loop seamlessly back to the first frame
+Focus on the full sampled timeline, not only the first and final frame:
+- whether the path revisits the starting place/viewpoint near the end
+- whether the trajectory feels cyclic instead of simply drifting forward
+- whether the final segment can transition smoothly back to the first frame
+- whether landmarks and scene layout remain consistent during the return
 
 Return JSON with:
 - loop_closure_score: float 0-1
 - loop_closure_achieved: boolean
 - endpoint_similarity: float 0-1
+- cyclic_trajectory_score: float 0-1
+- revisit_near_end_score: float 0-1
+- seam_smoothness_score: float 0-1
 - confidence: float 0-1
 """
 
     try:
         response = query_vlm(prompt, timeline_frames)
         result = parse_vlm_response(response)
-        score = float(result.get("loop_closure_score", result.get("endpoint_similarity", 0.5)))
-        endpoint_similarity = float(result.get("endpoint_similarity", score))
-        result["loop_closure_score"] = score
+        result.update({k: float(result.get(k, v)) for k, v in cycle_metrics.items()})
+        endpoint_similarity = float(result.get("endpoint_similarity", _image_similarity(timeline_frames[0], timeline_frames[-1])))
+        vlm_loop = float(result.get("loop_closure_score", endpoint_similarity))
+        cyclic = float(result.get("cyclic_trajectory_score", cycle_metrics["cyclic_trajectory_score"]))
+        revisit = float(result.get("revisit_near_end_score", cycle_metrics["revisit_near_end_score"]))
+        seam = float(result.get("seam_smoothness_score", cycle_metrics["seam_smoothness_score"]))
+        score = 0.45 * cyclic + 0.35 * max(revisit, cycle_metrics["best_revisit_similarity"]) + 0.20 * seam
+        score = max(score, 0.5 * vlm_loop + 0.5 * score)
+        result["loop_closure_score"] = float(max(0.0, min(1.0, score)))
         result["endpoint_similarity"] = endpoint_similarity
         result["frame_stride"] = LOOP_CLOSURE_FRAME_STRIDE
         if "loop_closure_achieved" not in result:
-            result["loop_closure_achieved"] = score >= 0.7 or endpoint_similarity >= 0.7
+            result["loop_closure_achieved"] = score >= 0.72 and revisit >= 0.68 and seam >= 0.62
         return result
     except Exception as e:
         return {
@@ -502,6 +571,7 @@ Return JSON with:
             "endpoint_similarity": 0.5,
             "confidence": 0.0,
             "frame_stride": LOOP_CLOSURE_FRAME_STRIDE,
+            **(_cycle_revisit_metrics(timeline_frames) if timeline_frames else {}),
         }
 
 def get_vlm_judgments(prompt_text: str, task_type: str,
@@ -578,6 +648,11 @@ def get_vlm_judgments(prompt_text: str, task_type: str,
         "doorway_entry_success": judgments.get("doorway_entered"),
         "endpoint_similarity": judgments.get("endpoint_similarity"),
         "loop_closure_score": judgments.get("loop_closure_score"),
+        "cyclic_trajectory_score": judgments.get("cyclic_trajectory_score"),
+        "revisit_near_end_score": judgments.get("revisit_near_end_score"),
+        "seam_smoothness_score": judgments.get("seam_smoothness_score"),
+        "best_revisit_similarity": judgments.get("best_revisit_similarity"),
+        "mean_topk_revisit_similarity": judgments.get("mean_topk_revisit_similarity"),
         "loop_frame_stride": judgments.get("frame_stride"),
     }
 

@@ -9,7 +9,7 @@ from .io_utils import read_json, write_json
 
 
 DEFAULT_FAILURE_WEIGHTS = {
-    "loop_closure_failure": 1.0,
+    "loop_closure_failure": 1.4,
     "progressive_scene_drift": 0.8,
     "memory_loss": 0.8,
     "action_not_followed": 0.8,
@@ -59,6 +59,29 @@ def per_video_score(video_entry: dict[str, Any]) -> float:
             drifts.append(float(raw[k]))
     mean_drift = sum(drifts) / len(drifts) if drifts else 0.0
     drift_term = 1.0 - _clamp01(mean_drift)
+
+    task_type = str(video_entry.get("task_type") or video_entry.get("task") or "").lower()
+    if task_type == "loop" or "loop_closure_score" in vlm:
+        loop = _clamp01(float(vlm.get("loop_closure_score", 0.5)))
+        cyclic = _clamp01(float(vlm.get("cyclic_trajectory_score", loop)))
+        revisit = _clamp01(
+            float(
+                vlm.get(
+                    "revisit_near_end_score",
+                    vlm.get("mean_topk_revisit_similarity", vlm.get("best_revisit_similarity", loop)),
+                )
+            )
+        )
+        seam = _clamp01(float(vlm.get("seam_smoothness_score", loop)))
+        s = (
+            0.30 * loop
+            + 0.25 * cyclic
+            + 0.20 * revisit
+            + 0.10 * seam
+            + 0.10 * _clamp01(c)
+            + 0.05 * drift_term
+        )
+        return _clamp01(s)
 
     s = 0.45 * _clamp01(a) + 0.25 * _clamp01(c) + 0.20 * _clamp01(t) + 0.10 * drift_term
     return _clamp01(s)

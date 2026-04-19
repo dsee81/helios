@@ -220,27 +220,46 @@ def loop_closure_failure_condition(metrics, task_type, vlm_judgments):
         return False
     task_specific = metrics.get("task_specific_metrics", {})
     endpoint_sim = task_specific.get("endpoint_similarity", 1.0)
+    loop_score = task_specific.get("loop_closure_score", endpoint_sim)
+    cyclic = task_specific.get("cyclic_trajectory_score", loop_score)
+    revisit = task_specific.get("revisit_near_end_score", loop_score)
+    seam = task_specific.get("seam_smoothness_score", loop_score)
     vlm_failed = False
     if vlm_judgments:
         vlm_failed = vlm_judgments.get("loop_closure_achieved") is False
         endpoint_sim = task_specific.get("endpoint_similarity", vlm_judgments.get("endpoint_similarity", endpoint_sim))
-    return endpoint_sim < 0.7 or vlm_failed
+        loop_score = task_specific.get("loop_closure_score", vlm_judgments.get("loop_closure_score", loop_score))
+        cyclic = task_specific.get("cyclic_trajectory_score", vlm_judgments.get("cyclic_trajectory_score", cyclic))
+        revisit = task_specific.get("revisit_near_end_score", vlm_judgments.get("revisit_near_end_score", revisit))
+        seam = task_specific.get("seam_smoothness_score", vlm_judgments.get("seam_smoothness_score", seam))
+    return loop_score < 0.72 or cyclic < 0.68 or revisit < 0.65 or seam < 0.60 or vlm_failed
 
 def loop_closure_failure_severity(metrics, task_type, vlm_judgments):
     task_specific = metrics.get("task_specific_metrics", {})
-    sim = task_specific.get("endpoint_similarity", 1.0)
+    sim = task_specific.get("loop_closure_score", task_specific.get("endpoint_similarity", 1.0))
     if vlm_judgments:
-        sim = task_specific.get("endpoint_similarity", vlm_judgments.get("endpoint_similarity", sim))
-    return normalize_severity(sim, 0.7, 1.0, invert=True)
+        sim = task_specific.get("loop_closure_score", vlm_judgments.get("loop_closure_score", sim))
+    cyclic = task_specific.get("cyclic_trajectory_score", vlm_judgments.get("cyclic_trajectory_score", sim) if vlm_judgments else sim)
+    revisit = task_specific.get("revisit_near_end_score", vlm_judgments.get("revisit_near_end_score", sim) if vlm_judgments else sim)
+    seam = task_specific.get("seam_smoothness_score", vlm_judgments.get("seam_smoothness_score", sim) if vlm_judgments else sim)
+    weak = min(float(sim), float(cyclic), float(revisit), float(seam))
+    return normalize_severity(weak, 0.6, 0.85, invert=True)
 
 def loop_closure_failure_evidence(metrics, task_type, vlm_judgments):
     task_specific = metrics.get("task_specific_metrics", {})
     evidence = {
-        "endpoint_similarity": task_specific.get("endpoint_similarity")
+        "endpoint_similarity": task_specific.get("endpoint_similarity"),
+        "loop_closure_score": task_specific.get("loop_closure_score"),
+        "cyclic_trajectory_score": task_specific.get("cyclic_trajectory_score"),
+        "revisit_near_end_score": task_specific.get("revisit_near_end_score"),
+        "seam_smoothness_score": task_specific.get("seam_smoothness_score"),
     }
     if vlm_judgments:
         evidence["vlm_loop_closure_achieved"] = vlm_judgments.get("loop_closure_achieved")
         evidence["vlm_loop_closure_score"] = vlm_judgments.get("loop_closure_score")
+        evidence["vlm_cyclic_trajectory_score"] = vlm_judgments.get("cyclic_trajectory_score")
+        evidence["vlm_revisit_near_end_score"] = vlm_judgments.get("revisit_near_end_score")
+        evidence["vlm_seam_smoothness_score"] = vlm_judgments.get("seam_smoothness_score")
     return evidence
 
 RULES.append(FailureRule(

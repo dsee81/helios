@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .gepa_driver import OptimizeConfig, optimize_with_gepa
 from .io_utils import read_json, write_json
+from .local_hf_lm import DEFAULT_LOCAL_QWEN_PATH
 
 
 DEFAULT_INITIAL_PROMPTS = {
@@ -107,7 +108,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--run_root", type=str, required=True)
     parser.add_argument("--video_dir", type=str, default="/mnt/shared_storage/dsee/Helios/gepa_inf_samples/gepa_samples")
     parser.add_argument("--seed_template", type=str, default="gepa_prompt_opt/examples/seed_loop_template.json")
-    parser.add_argument("--reflection_lm", type=str, default="deepseek/deepseek-chat")
+    parser.add_argument("--reflection_lm", type=str, default=f"local:{DEFAULT_LOCAL_QWEN_PATH}")
     parser.add_argument("--cuda_visible_devices", type=str, default="2")
     parser.add_argument("--num_iterations", type=int, default=3)
     parser.add_argument("--candidates_per_iteration", type=int, default=1)

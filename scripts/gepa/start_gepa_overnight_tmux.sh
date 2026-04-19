@@ -10,7 +10,9 @@ NUM_ITERATIONS="${NUM_ITERATIONS:-3}"
 CANDIDATES_PER_ITERATION="${CANDIDATES_PER_ITERATION:-1}"
 NUM_FRAMES="${NUM_FRAMES:-240}"
 FPS="${FPS:-30}"
-REFLECTION_LM="${REFLECTION_LM:-deepseek/deepseek-chat}"
+GEPA_LOCAL_QWEN_PATH_VALUE="${GEPA_LOCAL_QWEN_PATH_VALUE:-${GEPA_LOCAL_QWEN_PATH:-/root/dataDisk/dsee_temp_storage/Qwen/Qwen3-32B}}"
+REFLECTION_LM="${REFLECTION_LM:-local:${GEPA_LOCAL_QWEN_PATH_VALUE}}"
+GEPA_LOCAL_LM_DEVICE_VALUE="${GEPA_LOCAL_LM_DEVICE_VALUE:-${GEPA_LOCAL_LM_DEVICE:-cuda:5}}"
 
 mkdir -p "${RUN_ROOT}/logs"
 
@@ -19,7 +21,7 @@ if tmux has-session -t "${SESSION_NAME}" 2>/dev/null; then
     exit 1
 fi
 
-CMD="cd \"${REPO_ROOT}\" && .venv/bin/python -m gepa_prompt_opt.overnight_runner \
+CMD="cd \"${REPO_ROOT}\" && export GEPA_LOCAL_LM_DEVICE=\"${GEPA_LOCAL_LM_DEVICE_VALUE}\" && .venv/bin/python -m gepa_prompt_opt.overnight_runner \
   --repo_root \"${REPO_ROOT}\" \
   --run_root \"${RUN_ROOT}\" \
   --video_dir \"${REPO_ROOT}/gepa_inf_samples/gepa_samples\" \

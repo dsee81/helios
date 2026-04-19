@@ -54,10 +54,13 @@ train:
   pin_memory: false
   persistent_workers: false
   prefetch_factor: 2
-  max_train_steps: 1000
+  max_train_steps: 3000
   gradient_accumulation_steps: 1
   learning_rate: 5.0e-4
   save_every: 100
+  val_ratio: 0.1
+  val_split_seed: 43
+  val_every: 100
   allow_tf32: false
   gradient_checkpointing: true
   log_with: tensorboard

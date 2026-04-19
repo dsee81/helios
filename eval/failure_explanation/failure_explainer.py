@@ -119,6 +119,15 @@ def explain_failures(raw_metrics: dict,
                 task_specific_metrics["loop_closure_score"] = vlm_result["loop_closure_score"]
             if "loop_closure_achieved" in vlm_result:
                 task_specific_metrics["loop_closure_achieved"] = vlm_result["loop_closure_achieved"]
+            for key in (
+                "cyclic_trajectory_score",
+                "revisit_near_end_score",
+                "seam_smoothness_score",
+                "best_revisit_similarity",
+                "mean_topk_revisit_similarity",
+            ):
+                if key in vlm_result:
+                    task_specific_metrics[key] = vlm_result[key]
         else:
             vlm_judgments = {"vlm_unavailable": True}
     except Exception as e:

@@ -103,6 +103,9 @@ class TurnTITrainConfig:
     lr_scheduler: str = "constant"
     lr_warmup_steps: int = 0
     save_every: int = 100
+    val_ratio: float = 0.1
+    val_split_seed: int = 43
+    val_every: int = 100
     max_eval_batches: int = 8
     allow_tf32: bool = False
     gradient_checkpointing: bool = True

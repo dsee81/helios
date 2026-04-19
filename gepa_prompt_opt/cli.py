@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from .gepa_driver import OptimizeConfig, optimize_with_gepa
+from .local_hf_lm import DEFAULT_LOCAL_QWEN_PATH
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -38,8 +39,8 @@ def main(argv: list[str] | None = None) -> int:
     opt.add_argument(
         "--reflection_lm",
         type=str,
-        default="deepseek/deepseek-chat",
-        help="LiteLLM model string used by GEPA to propose edits (e.g. deepseek/deepseek-chat).",
+        default=f"local:{DEFAULT_LOCAL_QWEN_PATH}",
+        help="Reflection model used by GEPA. Use local:/path/to/model for a local HF model.",
     )
 
     args = p.parse_args(argv)
